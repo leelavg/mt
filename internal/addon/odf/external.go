@@ -176,6 +176,51 @@ func (o *odf) configureOdfClient(ctx context.Context, providerName, clusterCIDR,
 		return err
 	}
 	o.logger.Info("client CRD established", "cluster", o.clusterName, "name", crd)
+	ready, err := o.odfClientReady(ctx, providerKubeconfig, providerName)
+	if err != nil {
+		return err
+	}
+	mappingConfigMap := ""
+	if mapFrom != "" {
+		result, err := o.runner.Run(ctx, support.KubeClient,
+			"get", "storageconsumer", mapFrom, "-n", providerNamespace,
+			"-o", "jsonpath={.status.resourceNameMappingConfigMap.name}",
+			"--kubeconfig", providerKubeconfig,
+		)
+		if err != nil {
+			return fmt.Errorf("get resource mapping from StorageConsumer %q: %w", mapFrom, err)
+		}
+		mappingConfigMap = strings.TrimSpace(result.Stdout)
+		if mappingConfigMap == "" {
+			return fmt.Errorf("StorageConsumer %q on provider %q has no status.resourceNameMappingConfigMap.name", mapFrom, providerName)
+		}
+		if !ready {
+			client, err := o.runner.Run(ctx, support.KubeClient,
+				"get", "storageclient", providerName, "--ignore-not-found",
+				"-o", "jsonpath={.status.phase}", "--kubeconfig", o.kubeconfig,
+			)
+			if err != nil {
+				return fmt.Errorf("get StorageClient %q: %w", providerName, err)
+			}
+			if strings.TrimSpace(client.Stdout) == "Connected" {
+				return fmt.Errorf("StorageClient %q is connected but StorageConsumer %q is not ready", providerName, o.clusterName)
+			}
+		}
+		if ready {
+			result, err := o.runner.Run(ctx, support.KubeClient,
+				"get", "storageconsumer", o.clusterName, "-n", providerNamespace,
+				"-o", "jsonpath={.status.resourceNameMappingConfigMap.name}",
+				"--kubeconfig", providerKubeconfig,
+			)
+			if err != nil {
+				return fmt.Errorf("get resource mapping from StorageConsumer %q: %w", o.clusterName, err)
+			}
+			if current := strings.TrimSpace(result.Stdout); current != mappingConfigMap {
+				return fmt.Errorf("connected StorageConsumer %q has resource mapping %q, cannot change it to %q from %q", o.clusterName, current, mappingConfigMap, mapFrom)
+			}
+		}
+		o.logger.Info("reusing ODF resource mapping", "source", mapFrom, "configmap", mappingConfigMap)
+	}
 	networkPolicy, err := support.Render(odfClientNetworkPolicyTmpl, map[string]string{
 		"ClientCluster": o.clusterName,
 		"ClientCIDR":    clusterCIDR,
@@ -191,10 +236,6 @@ func (o *odf) configureOdfClient(ctx context.Context, providerName, clusterCIDR,
 	if err != nil {
 		return err
 	}
-	ready, err := o.odfClientReady(ctx, providerKubeconfig, providerName)
-	if err != nil {
-		return err
-	}
 	if ready {
 		o.logger.Info("updating mTLS settings on connected ODF client", "provider", providerName, "client", o.clusterName)
 		if err := o.patchStorageConsumerTLS(ctx, providerKubeconfig, clientSAN); err != nil {
@@ -204,23 +245,6 @@ func (o *odf) configureOdfClient(ctx context.Context, providerName, clusterCIDR,
 			return err
 		}
 	} else {
-		mappingConfigMap := ""
-		if mapFrom != "" {
-			result, err := o.runner.Run(ctx, support.KubeClient,
-				"get", "storageconsumer", mapFrom, "-n", providerNamespace,
-				"-o", "jsonpath={.status.resourceNameMappingConfigMap.name}",
-				"--kubeconfig", providerKubeconfig,
-			)
-			if err != nil {
-				return fmt.Errorf("get resource mapping from StorageConsumer %q: %w", mapFrom, err)
-			}
-			mappingConfigMap = strings.TrimSpace(result.Stdout)
-			if mappingConfigMap == "" {
-				return fmt.Errorf("StorageConsumer %q on provider %q has no status.resourceNameMappingConfigMap.name", mapFrom, providerName)
-			}
-			o.logger.Info("reusing ODF resource mapping", "source", mapFrom, "configmap", mappingConfigMap)
-		}
-
 		consumer, err := support.Render(storageConsumerTmpl, map[string]string{
 			"ClientCluster":    o.clusterName,
 			"ClientSAN":        strconv.Quote(clientSAN),

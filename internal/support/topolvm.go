@@ -98,6 +98,49 @@ func (t *TopoLVMMgr) CreateBackend(ctx context.Context, nodeName string) error {
 	return t.createBackend(ctx, disk, nodeName)
 }
 
+func (t *TopoLVMMgr) RestoreBackend(ctx context.Context, nodeName string) error {
+	if !t.Enabled() {
+		return nil
+	}
+
+	disk := filepath.Join(t.stateDir, nodeName, nodeName+".image")
+	if _, err := os.Stat(disk); err != nil {
+		return fmt.Errorf("stat TopoLVM backing image for %s: %w", nodeName, err)
+	}
+
+	device, err := t.loopDevice(ctx, disk)
+	if err != nil {
+		return err
+	}
+	if device == "" {
+		result, err := RunPrivileged(ctx, t.runner, "losetup", "--find", "--show", "--nooverlap", disk)
+		if err != nil {
+			return fmt.Errorf("reattach TopoLVM backing image for %s: %w", nodeName, err)
+		}
+		device = strings.TrimSpace(result.Stdout)
+		if device == "" {
+			return fmt.Errorf("losetup returned no device for %s", disk)
+		}
+	}
+
+	if err := t.waitForVolumeGroup(ctx, nodeName); err != nil {
+		return fmt.Errorf("restore TopoLVM volume group for %s: %w", nodeName, err)
+	}
+	if t.config.thinpool {
+		result, err := t.runLVM(ctx, nodeName, "lvs", "--noheadings", "-o", "lv_name", nodeName)
+		if err != nil {
+			return fmt.Errorf("verify TopoLVM thin pool for %s: %w", nodeName, err)
+		}
+		if !slices.Contains(strings.Fields(result.Stdout), "thin") {
+			return fmt.Errorf("TopoLVM thin pool for %s is missing", nodeName)
+		}
+	}
+	if _, err := t.LVMConfigMount(ctx, nodeName); err != nil {
+		return fmt.Errorf("refresh TopoLVM LVM filter for %s: %w", nodeName, err)
+	}
+	return nil
+}
+
 func (t *TopoLVMMgr) LVMConfigMount(ctx context.Context, nodeName string) (string, error) {
 	if !t.Enabled() {
 		return "", nil

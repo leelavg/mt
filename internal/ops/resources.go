@@ -22,6 +22,7 @@ import (
 var defaultName = rootconfig.Load().Name
 
 const internalKubeconfig = "/var/lib/microshift/resources/kubeadmin/kubeconfig"
+const containerKubeClient = "oc"
 const podTemplate = `
 		{{- range .items -}}
 		    {{- $ns := .metadata.namespace -}}
@@ -76,16 +77,19 @@ Examples:
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			clusterName := cmd.String("name")
-			kubeconfig, err := rootconfig.Kubeconfig(clusterName)
+			cfg, err := rootconfig.ReadClusterConfig(clusterName)
 			if err != nil {
-				return fmt.Errorf("could not load kubeconfig for cluster %q: %w", clusterName, err)
+				return fmt.Errorf("could not load config for cluster %q: %w", clusterName, err)
+			}
+			if cfg.NodeName == "" {
+				cfg.NodeName = rootconfig.NodeName(clusterName, 0)
 			}
 			r := &resources{
-				logger:     logger,
-				runner:     runner,
-				kubeconfig: kubeconfig,
-				namespace:  cmd.String("namespace"),
-				node:       cmd.String("node"),
+				logger:    logger,
+				runner:    runner,
+				container: cfg.NodeName,
+				namespace: cmd.String("namespace"),
+				node:      cmd.String("node"),
 			}
 			if cmd.Bool("tune") {
 				return r.tune(ctx)
@@ -97,11 +101,16 @@ Examples:
 
 type resources struct {
 	formatter
-	logger     *slog.Logger
-	runner     execx.Runner
-	kubeconfig string
-	namespace  string
-	node       string
+	logger    *slog.Logger
+	runner    execx.Runner
+	container string
+	namespace string
+	node      string
+}
+
+func (r *resources) run(ctx context.Context, args ...string) (execx.Result, error) {
+	command := []string{"exec", r.container, containerKubeClient, "--kubeconfig", internalKubeconfig}
+	return support.RunPodmanPrivileged(ctx, r.runner, append(command, args...)...)
 }
 
 type containerRow struct {
@@ -166,7 +175,7 @@ type nodeListOutput struct {
 }
 
 func (r *resources) nodes(ctx context.Context) (nodeListOutput, error) {
-	result, err := r.runner.Run(ctx, support.KubeClient, "get", "nodes", "-o", "json", "--kubeconfig="+r.kubeconfig)
+	result, err := r.run(ctx, "get", "nodes", "-o", "json")
 	if err != nil {
 		return nodeListOutput{}, fmt.Errorf("oc get nodes: %w", err)
 	}
@@ -193,8 +202,7 @@ func (r *resources) podRows(ctx context.Context, ns string) ([]podRow, error) {
 	if r.node != "" {
 		args = append(args, "--field-selector", "spec.nodeName="+r.node)
 	}
-	args = append(args, "--kubeconfig="+r.kubeconfig)
-	result, err := r.runner.Run(ctx, support.KubeClient, args...)
+	result, err := r.run(ctx, args...)
 	if err != nil {
 		return nil, fmt.Errorf("oc get pods: %w", err)
 	}
@@ -222,7 +230,7 @@ func (r *resources) podRows(ctx context.Context, ns string) ([]podRow, error) {
 
 // nodeStats fetches CPU and memory usage from the kubelet on a node.
 func (r *resources) nodeStats(ctx context.Context, nodeName string) (kubeletStats, error) {
-	result, err := r.runner.Run(ctx, support.KubeClient, "get", "--raw", "/api/v1/nodes/"+nodeName+"/proxy/stats/summary", "--kubeconfig="+r.kubeconfig)
+	result, err := r.run(ctx, "get", "--raw", "/api/v1/nodes/"+nodeName+"/proxy/stats/summary")
 	if err != nil {
 		return kubeletStats{}, fmt.Errorf("get kubelet stats summary for node %s: %w", nodeName, err)
 	}

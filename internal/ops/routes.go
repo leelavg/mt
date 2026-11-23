@@ -206,18 +206,20 @@ func reconcileManagedCorefile(corefile, startMarker, endMarker string, blocks []
 		return "", false, fmt.Errorf("malformed dfmicro DNS block in Corefile")
 	}
 
-	if start != -1 {
-		end += len(endMarker)
-		corefile = corefile[:start] + corefile[end:]
-	} else if len(blocks) == 0 {
+	if start == -1 && len(blocks) == 0 {
 		return corefile, false, nil
 	}
 
-	if len(blocks) == 0 {
-		return strings.TrimRight(corefile, "\n") + "\n", true, nil
+	managed := ""
+	if len(blocks) > 0 {
+		managed = startMarker + "\n" + strings.Join(blocks, "\n\n") + "\n" + endMarker
+	}
+	if start != -1 {
+		end += len(endMarker)
+		updated := corefile[:start] + managed + corefile[end:]
+		return updated, updated != original, nil
 	}
 
-	managed := startMarker + "\n" + strings.Join(blocks, "\n\n") + "\n" + endMarker
 	updated := strings.TrimRight(corefile, "\n") + "\n\n" + managed + "\n"
 	return updated, updated != original, nil
 }

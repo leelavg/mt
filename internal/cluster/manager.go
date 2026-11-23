@@ -119,6 +119,9 @@ func (m *manager) start(ctx context.Context) error {
 
 	m.logger.Info("starting cluster", "name", m.cfg.Name, "containers", len(containers))
 	for _, container := range containers {
+		if err := m.topolvm.RestoreBackend(ctx, container); err != nil {
+			return fmt.Errorf("restore TopoLVM backend for %s: %w", container, err)
+		}
 		m.logger.Info("starting container", "name", m.cfg.Name, "container", container)
 		if err := m.node.Start(ctx, container, m.networkTrust()); err != nil {
 			m.logger.Warn("failed to start container", "name", m.cfg.Name, "container", container, "error", err)

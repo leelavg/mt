@@ -28,7 +28,7 @@ var cleanupJobCmds = []string{
 var uninstallPostCleanupCmds = []string{
 	"delete configmap ocs-client-operator-config -n openshift-storage --ignore-not-found",
 	"delete clusterserviceversions --all -n openshift-storage --ignore-not-found",
-	"delete subscription --all -n openshift-storage --ignore-not-found",
+	"delete subscriptions.operators.coreos.com --all -n openshift-storage --ignore-not-found",
 	"delete operatorgroup odf -n openshift-storage --ignore-not-found",
 	"delete catalogsource odf-catsrc -n openshift-marketplace --ignore-not-found",
 }
