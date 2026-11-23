@@ -457,6 +457,17 @@ spec:
 {{end}}
 `
 
+const storageConsumerTLSTmpl = `apiVersion: ocs.openshift.io/v1alpha1
+kind: StorageConsumer
+metadata:
+  name: {{.ClientCluster}}
+  namespace: openshift-storage
+spec:
+  clientCAConfigMap:
+    name: {{.ClientCluster}}
+  clientSAN: {{.ClientSAN}}
+`
+
 const storageClientCertSecretTmpl = `apiVersion: v1
 kind: Secret
 metadata:
@@ -535,6 +546,19 @@ metadata:
 spec:
   onboardingTicket: {{.Ticket}}
   storageProviderEndpoint: {{.Endpoint}}
+  serverCAConfigMap:
+    name: {{.ProviderCluster}}
+    key: service-ca.crt
+  serverSAN: {{.ServerSAN}}
+  clientCertSecret:
+    name: {{.ProviderCluster}}
+`
+
+const storageClientTLSTmpl = `apiVersion: ocs.openshift.io/v1alpha1
+kind: StorageClient
+metadata:
+  name: {{.ProviderCluster}}
+spec:
   serverCAConfigMap:
     name: {{.ProviderCluster}}
     key: service-ca.crt

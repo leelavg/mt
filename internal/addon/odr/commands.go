@@ -54,7 +54,7 @@ Note: --cluster applies to all subcommands and must come before the subcommand n
 				Usage: "Configure S3 and managed clusters for ODR",
 				UsageText: `Requires local-s3 attached to the hub and both managed clusters. Creates the shared dfmicro-odr bucket.
 
-For CephFS RDR, run dfmicro ops clusterset sync after the destination ServiceExport appears.`,
+For CephFS RDR, run dfmicro ops network --sync-clusterset after the destination ServiceExport appears.`,
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{Name: "managed-cluster", Usage: "ManagedCluster name (repeatable or comma separated)"},
 					&cli.StringFlag{

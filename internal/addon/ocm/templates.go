@@ -1,4 +1,20 @@
-apiVersion: work.open-cluster-management.io/v1
+package ocm
+
+const argocdClusterSecretTmpl = `apiVersion: v1
+kind: Secret
+metadata:
+  name: {{.SecretName}}
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    app.kubernetes.io/created-by: dfmicro
+stringData:
+  name: {{.ClusterName}}
+  server: {{.Server}}
+  config: {{.Config}}
+`
+
+const gpfHubAPIEgressTmpl = `apiVersion: work.open-cluster-management.io/v1
 kind: ManifestWork
 metadata:
   name: {{.Name}}
@@ -28,3 +44,4 @@ spec:
           ports:
           - protocol: TCP
             port: {{.HubPort}}
+`

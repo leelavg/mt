@@ -23,7 +23,6 @@ func Command(logger *slog.Logger, runner execx.Runner) *cli.Command {
 				Name:  "install",
 				Usage: "Start the standalone local-s3 service",
 				UsageText: `Starts a standalone container on dfmicro's default bridge network without publishing a host port. Data is kept in a named volume.
-Requires a cluster-created default bridge network.
 
 Use configure to publish a Service in a cluster.
 The service allows anonymous access until accounts are configured.`,

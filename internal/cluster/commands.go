@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
 	"os"
 
 	rootconfig "dfmicro/internal/config"
@@ -78,13 +77,12 @@ func createFlags() []cli.Flag {
 		},
 		&cli.StringSliceFlag{
 			Name:     "api-server-ip",
-			Usage:    "Additional IPv4 address for API server access (repeatable, e.g. cloud floating IP)",
+			Usage:    "Additional private IPv4 address for API server access (e.g. cloud floating IP)",
 			Category: "Network:",
 			Validator: func(ips []string) error {
 				for _, value := range ips {
-					ip := net.ParseIP(value)
-					if ip == nil || ip.To4() == nil {
-						return fmt.Errorf("invalid IPv4 address %q", value)
+					if err := support.ValidateIPv4PrivateCIDR(value + "/32"); err != nil {
+						return fmt.Errorf("invalid private IPv4 address %q: %w", value, err)
 					}
 				}
 				return nil
@@ -138,12 +136,12 @@ func createFlags() []cli.Flag {
 		},
 		&cli.StringSliceFlag{
 			Name:     "idms",
-			Usage:    "Path to an ImageDigestMirrorSet YAML file for mirror registries (repeatable, merged in order)",
+			Usage:    "Path to an ImageDigestMirrorSet YAML file for mirror registries (merged in order)",
 			Category: "Mounts (immutable on creation):",
 		},
 		&cli.StringSliceFlag{
 			Name:     "mount",
-			Usage:    "Bind mount in Podman format: /host/path:/container/path[:opts] (repeatable, replaces the same container path)",
+			Usage:    "Bind mount in Podman format: /host/path:/container/path[:opts] (replaces the same container path)",
 			Category: "Mounts (immutable on creation):",
 		},
 	}
@@ -153,7 +151,7 @@ func clusterFlags() []cli.Flag {
 	return []cli.Flag{nameFlag()}
 }
 
-func Command(logger *slog.Logger, runner execx.Runner, reconcileDNS func(context.Context) error) *cli.Command {
+func Command(logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS func(context.Context) error) *cli.Command {
 	return &cli.Command{
 		Name:      "cluster",
 		Usage:     "Manage cluster lifecycle",
@@ -212,7 +210,7 @@ Examples:
 					if err != nil {
 						return err
 					}
-					return newManager(cfg, logger, runner, reconcileDNS).create(ctx)
+					return newManager(cfg, logger, runner, reconcileNetworkDNS).create(ctx)
 				},
 			},
 			{
@@ -220,27 +218,22 @@ Examples:
 				Aliases:   []string{"rm"},
 				Usage:     "Delete cluster containers, network, and storage",
 				UsageText: "Stops and removes all cluster containers, networking, and storage stack.",
-				ArgsUsage: "[cluster]",
-				Arguments: []cli.Argument{
-					&cli.StringArg{Name: "cluster", UsageText: "Cluster name"},
-				},
-				Flags: clusterFlags(),
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					name := cmd.StringArg("cluster")
-					if name != "" {
-						if cmd.IsSet("name") && name != cmd.String("name") {
-							return fmt.Errorf("positional cluster %q conflicts with --name %q", name, cmd.String("name"))
-						}
-					} else {
-						name = cmd.String("name")
+				Flags:     clusterFlags(),
+				Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+					if cmd.Args().Present() {
+						return ctx, fmt.Errorf("unexpected positional argument %q; use --name", cmd.Args().First())
 					}
+					return ctx, nil
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					name := cmd.String("name")
 					if err := validateClusterName(name); err != nil {
 						return err
 					}
 
 					cfg, err := rootconfig.ReadClusterConfig(name)
 					if err == nil {
-						return newManager(cfg, logger, runner, reconcileDNS).delete(ctx, false)
+						return newManager(cfg, logger, runner, reconcileNetworkDNS).delete(ctx, false)
 					}
 					if !errors.Is(err, os.ErrNotExist) {
 						return err
@@ -248,12 +241,12 @@ Examples:
 					// Rebuild the paths and node defaults needed for cleanup after the config file is gone.
 					cfg = deriveConfig(defaultRootConfig.ClusterDefaults, name)
 					if _, err := os.Stat(cfg.StateDir); errors.Is(err, os.ErrNotExist) {
-						return newManager(cfg, logger, runner, reconcileDNS).delete(ctx, true)
+						return newManager(cfg, logger, runner, reconcileNetworkDNS).delete(ctx, true)
 					}
 					// A state directory without config can still contain TopoLVM resources from an interrupted delete.
 					// Enable their cleanup before removing the remaining cluster state.
 					cfg.EnableTopoLVM = true
-					return newManager(cfg, logger, runner, reconcileDNS).delete(ctx, false)
+					return newManager(cfg, logger, runner, reconcileNetworkDNS).delete(ctx, false)
 				},
 			},
 			{
@@ -269,7 +262,7 @@ Examples:
 					if err != nil {
 						return err
 					}
-					manager := newManager(cfg, logger, runner, reconcileDNS)
+					manager := newManager(cfg, logger, runner, reconcileNetworkDNS)
 					if cmd.Bool("unpause") {
 						return manager.unpause(ctx)
 					}
@@ -289,7 +282,7 @@ Examples:
 					if err != nil {
 						return err
 					}
-					manager := newManager(cfg, logger, runner, reconcileDNS)
+					manager := newManager(cfg, logger, runner, reconcileNetworkDNS)
 					if cmd.Bool("pause") {
 						return manager.pause(ctx)
 					}
@@ -318,7 +311,7 @@ Examples:
 					if err != nil {
 						return err
 					}
-					return newManager(cfg, logger, runner, reconcileDNS).printKubeconfig(ctx)
+					return newManager(cfg, logger, runner, reconcileNetworkDNS).printKubeconfig(ctx)
 				},
 			},
 			{
@@ -337,7 +330,7 @@ Examples:
 					if err != nil {
 						return err
 					}
-					manager := newManager(cfg, logger, runner, reconcileDNS)
+					manager := newManager(cfg, logger, runner, reconcileNetworkDNS)
 					return manager.exec(ctx, cmd.String("container"))
 				},
 			},

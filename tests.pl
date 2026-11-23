@@ -744,7 +744,7 @@ sub run_level_6 {
 
 	section('client-only ODF consumer', $micro);
 	run_ok('install ODF client operator on micro', "addon odf --cluster $micro install " . odf_install_args('ocs-client-operator'));
-	run_ok('create route DNS entries', 'ops routes create');
+	run_ok('sync route DNS entries', 'ops network --sync-routes');
 	run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first");
 	kubectl_ok('set client StorageClass', $first_kubeconfig,
 		"patch storageconsumer $micro -n openshift-storage --type=json -p '[{\"op\":\"add\",\"path\":\"/spec/storageClasses\",\"value\":[{\"name\":\"ocs-storagecluster-ceph-rbd\"}]}]'");
@@ -763,7 +763,7 @@ sub run_level_7 {
 
 	section('client-only ODF consumer', $micro);
 	run_ok('install ODF client operator on micro', "addon odf --cluster $micro install " . odf_install_args('ocs-client-operator'));
-	run_ok('create route DNS entries', 'ops routes create');
+	run_ok('sync route DNS entries', 'ops network --sync-routes');
 	run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first");
 	kubectl_ok('set client StorageClass', $first_kubeconfig,
 		"patch storageconsumer $micro -n openshift-storage --type=json -p '[{\"op\":\"add\",\"path\":\"/spec/storageClasses\",\"value\":[{\"name\":\"ocs-storagecluster-ceph-rbd\"}]}]'");

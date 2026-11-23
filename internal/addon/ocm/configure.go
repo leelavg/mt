@@ -18,20 +18,25 @@ import (
 //go:embed assets/application-manager.yaml
 var applicationManagerManifest string
 
+type hubAddonSetup uint8
+
+const (
+	hubAddonApplicationManager hubAddonSetup = iota
+	hubAddonArgoCD
+	hubAddonGovernancePolicyFramework
+)
+
 type ocmAddon struct {
-	hubName      string
-	hubNamespace string
-	spokeName    string
-	appManager   bool
-	argocd       bool
+	hubSetup   hubAddonSetup
+	spokeAddon string
 }
 
 // The hub and spoke CLIs use different names for some addons.
 var supportedOCMAddons = map[string]ocmAddon{
-	"application-manager":         {spokeName: "application-manager", appManager: true},
-	"argocd":                      {argocd: true},
-	"config-policy-controller":    {hubName: "governance-policy-framework", spokeName: "config-policy-controller"},
-	"governance-policy-framework": {hubName: "governance-policy-framework", spokeName: "governance-policy-framework"},
+	"application-manager":         {hubSetup: hubAddonApplicationManager, spokeAddon: "application-manager"},
+	"argocd":                      {hubSetup: hubAddonArgoCD},
+	"config-policy-controller":    {hubSetup: hubAddonGovernancePolicyFramework, spokeAddon: "config-policy-controller"},
+	"governance-policy-framework": {hubSetup: hubAddonGovernancePolicyFramework, spokeAddon: "governance-policy-framework"},
 }
 
 var supportedOCMAddonNames = []string{
@@ -46,19 +51,22 @@ func (o *ocm) listAddons() error {
 	fmt.Fprintln(w, "DFMICRO ADDON\tHUB SETUP\tSPOKE SETUP")
 	for _, name := range supportedOCMAddonNames {
 		addon := supportedOCMAddons[name]
-		hubName := addon.hubName
-		spokeName := addon.spokeName
-		if addon.argocd {
-			hubName = "Argo CD v" + argocdVersion
-			spokeName = "Argo CD cluster Secrets"
+		hubSetup := ""
+		switch addon.hubSetup {
+		case hubAddonApplicationManager:
+			hubSetup = "embedded bundle"
+		case hubAddonArgoCD:
+			hubSetup = "Argo CD v" + argocdVersion
+		case hubAddonGovernancePolicyFramework:
+			hubSetup = "governance-policy-framework"
 		}
-		if addon.appManager {
-			hubName = "embedded bundle"
+		spokeSetup := addon.spokeAddon
+		if addon.hubSetup == hubAddonArgoCD {
+			spokeSetup = "Argo CD cluster Secrets"
+		} else if spokeSetup == "" {
+			spokeSetup = "hub only"
 		}
-		if spokeName == "" {
-			spokeName = "hub only"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", name, hubName, spokeName)
+		fmt.Fprintf(w, "%s\t%s\t%s\n", name, hubSetup, spokeSetup)
 	}
 	return w.Flush()
 }
@@ -98,8 +106,7 @@ func (o *ocm) configure(ctx context.Context, hubName string, spokeNames, addonNa
 		return fmt.Errorf("could not load kubeconfig for hub cluster %q: %w", hubName, err)
 	}
 
-	hubAddonsByNamespace := make(map[string][]string)
-	hubAddonNamespaces := make([]string, 0, len(addonNames))
+	var hubAddons []string
 	spokeAddons := make([]string, 0, len(addonNames))
 	hubSeen := make(map[string]struct{})
 	spokeAddonSeen := make(map[string]struct{})
@@ -109,28 +116,23 @@ func (o *ocm) configure(ctx context.Context, hubName string, spokeNames, addonNa
 	for _, name := range addonNames {
 		name = strings.TrimSpace(name)
 		addon := supportedOCMAddons[name]
-		if addon.argocd {
-			installArgoCD = true
-			continue
-		}
-		if addon.appManager {
+		switch addon.hubSetup {
+		case hubAddonApplicationManager:
 			installApplicationManager = true
-		}
-		if addon.hubName != "" {
-			if _, ok := hubSeen[addon.hubName]; !ok {
-				hubSeen[addon.hubName] = struct{}{}
-				if _, ok := hubAddonsByNamespace[addon.hubNamespace]; !ok {
-					hubAddonNamespaces = append(hubAddonNamespaces, addon.hubNamespace)
-				}
-				hubAddonsByNamespace[addon.hubNamespace] = append(hubAddonsByNamespace[addon.hubNamespace], addon.hubName)
+		case hubAddonArgoCD:
+			installArgoCD = true
+		case hubAddonGovernancePolicyFramework:
+			if _, ok := hubSeen["governance-policy-framework"]; !ok {
+				hubSeen["governance-policy-framework"] = struct{}{}
+				hubAddons = append(hubAddons, "governance-policy-framework")
 			}
 		}
-		if addon.spokeName != "" {
-			if _, ok := spokeAddonSeen[addon.spokeName]; !ok {
-				spokeAddonSeen[addon.spokeName] = struct{}{}
-				spokeAddons = append(spokeAddons, addon.spokeName)
+		if addon.spokeAddon != "" {
+			if _, ok := spokeAddonSeen[addon.spokeAddon]; !ok {
+				spokeAddonSeen[addon.spokeAddon] = struct{}{}
+				spokeAddons = append(spokeAddons, addon.spokeAddon)
 			}
-			installGPFOnSpokes = installGPFOnSpokes || addon.spokeName == "governance-policy-framework"
+			installGPFOnSpokes = installGPFOnSpokes || addon.spokeAddon == "governance-policy-framework"
 		}
 	}
 
@@ -146,7 +148,7 @@ func (o *ocm) configure(ctx context.Context, hubName string, spokeNames, addonNa
 	clusteradm := support.ClusteradmPath()
 	var tempDir string
 	var hubPrivateKubeconfig, contextName string
-	if len(hubAddonNamespaces) > 0 || len(spokeNames) > 0 {
+	if len(hubAddons) > 0 || len(spokeNames) > 0 {
 		tempDir, err = os.MkdirTemp("", "dfmicro-ocm-")
 		if err != nil {
 			return fmt.Errorf("create temporary OCM config directory: %w", err)
@@ -171,15 +173,11 @@ func (o *ocm) configure(ctx context.Context, hubName string, spokeNames, addonNa
 			return fmt.Errorf("install Argo CD on hub: %w", err)
 		}
 	}
-	for _, namespace := range hubAddonNamespaces {
-		addons := hubAddonsByNamespace[namespace]
-		o.logger.Info("installing OCM addons on hub", "addons", addons, "cluster", hubName, "namespace", namespace)
+	if len(hubAddons) > 0 {
+		o.logger.Info("installing OCM addons on hub", "addons", hubAddons, "cluster", hubName)
 		args := []string{
 			"--kubeconfig", hubPrivateKubeconfig, "--context", contextName,
-			"install", "hub-addon", "--names=" + strings.Join(addons, ","),
-		}
-		if namespace != "" {
-			args = append(args, "--namespace="+namespace, "--create-namespace")
+			"install", "hub-addon", "--names=" + strings.Join(hubAddons, ","),
 		}
 		if _, err := execx.Run(ctx, o.runner, clusteradm, args...); err != nil {
 			return fmt.Errorf("install OCM addons on hub: %w", err)

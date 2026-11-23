@@ -2,7 +2,6 @@ package ocm
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -12,9 +11,6 @@ import (
 	"dfmicro/internal/execx"
 	"dfmicro/internal/support"
 )
-
-//go:embed assets/gpf-hub-api-egress.yaml.tmpl
-var gpfHubAPIEgressTmpl string
 
 const gpfHubAPIEgressName = "dfmicro-gpf-host-api-egress"
 

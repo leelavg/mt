@@ -84,7 +84,7 @@ func configCommand() *cli.Command {
 }
 
 func Command(logger *slog.Logger, runner execx.Runner) *cli.Command {
-	opsCommand, reconcileDNS := ops.Command(logger, runner)
+	opsCommand, reconcileNetworkDNS := ops.Command(logger, runner)
 	cmd := &cli.Command{
 		Name:    support.BinaryName,
 		Usage:   "Run MicroShift clusters in rootful Podman containers",
@@ -108,11 +108,11 @@ Quick start:
 		Action: support.UnknownSubcommand,
 		Commands: []*cli.Command{
 			addon.Command(logger, runner),
-			cluster.Command(logger, runner, reconcileDNS),
+			cluster.Command(logger, runner, reconcileNetworkDNS),
 			node.Command(logger, runner),
 			configCommand(),
 			docsCommand(),
-			network.Command(logger, runner, reconcileDNS),
+			network.Command(logger, runner, reconcileNetworkDNS),
 			opsCommand,
 		},
 	}

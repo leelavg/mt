@@ -110,6 +110,7 @@ func (o *odr) configure(ctx context.Context, managedClusters []string, peerType 
 		return fmt.Errorf("apply ODR S3Configuration: %w", err)
 	}
 	o.logger.Info("ODR S3Configuration applied", "cluster", o.clusterName)
+	storageClusterRefName := "ocs-storagecluster"
 	if peerType == "async" {
 		for _, clusterName := range managedClusters {
 			kubeconfig, err := rootconfig.Kubeconfig(clusterName)
@@ -125,15 +126,10 @@ func (o *odr) configure(ctx context.Context, managedClusters []string, peerType 
 				return fmt.Errorf("wait for StorageCluster in cluster %q: %w", clusterName, err)
 			}
 		}
-	}
-	if peerType == "sync" {
+	} else if peerType == "sync" {
 		if err := o.configureSyncCIDRs(ctx, managedClusters); err != nil {
 			return err
 		}
-	}
-
-	storageClusterRefName := "ocs-storagecluster"
-	if peerType == "sync" {
 		// MDR creates the StorageClient under the hub cluster name.
 		storageClusterRefName = o.clusterName
 	}
@@ -156,7 +152,7 @@ func (o *odr) configure(ctx context.Context, managedClusters []string, peerType 
 		}
 	}
 	if peerType == "async" {
-		o.logger.Info("for CephFS RDR, run dfmicro ops clusterset sync after the destination ServiceExport appears")
+		o.logger.Info("for CephFS RDR, run dfmicro ops network --sync-clusterset after the destination ServiceExport appears")
 	}
 	return nil
 }

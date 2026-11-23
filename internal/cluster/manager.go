@@ -44,22 +44,22 @@ type podmanContainer struct {
 }
 
 type manager struct {
-	cfg          rootconfig.ClusterConfig
-	node         *support.NodeMgr
-	topolvm      *support.TopoLVMMgr
-	logger       *slog.Logger
-	runner       execx.Runner
-	reconcileDNS func(context.Context) error
+	cfg                 rootconfig.ClusterConfig
+	node                *support.NodeMgr
+	topolvm             *support.TopoLVMMgr
+	logger              *slog.Logger
+	runner              execx.Runner
+	reconcileNetworkDNS func(context.Context) error
 }
 
-func newManager(cfg rootconfig.ClusterConfig, logger *slog.Logger, runner execx.Runner, reconcileDNS func(context.Context) error) *manager {
+func newManager(cfg rootconfig.ClusterConfig, logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS func(context.Context) error) *manager {
 	return &manager{
-		cfg:          cfg,
-		node:         support.NewNodeMgr(logger, runner),
-		topolvm:      support.NewTopoLVMMgr(logger, runner, cfg),
-		logger:       logger,
-		runner:       runner,
-		reconcileDNS: reconcileDNS,
+		cfg:                 cfg,
+		node:                support.NewNodeMgr(logger, runner),
+		topolvm:             support.NewTopoLVMMgr(logger, runner, cfg),
+		logger:              logger,
+		runner:              runner,
+		reconcileNetworkDNS: reconcileNetworkDNS,
 	}
 }
 
@@ -220,10 +220,10 @@ func (m *manager) unpause(ctx context.Context) error {
 }
 
 func (m *manager) refreshDNS(ctx context.Context) {
-	if m.reconcileDNS == nil {
+	if m.reconcileNetworkDNS == nil {
 		return
 	}
-	if err := m.reconcileDNS(ctx); err != nil {
+	if err := m.reconcileNetworkDNS(ctx); err != nil {
 		m.logger.Warn("failed to reconcile DNS", "cluster", m.cfg.Name, "error", err)
 	}
 }

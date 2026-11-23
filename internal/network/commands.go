@@ -16,7 +16,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func Command(logger *slog.Logger, runner execx.Runner, reconcileDNS func(context.Context) error) *cli.Command {
+func Command(logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS func(context.Context) error) *cli.Command {
 	return &cli.Command{
 		Name:   "network",
 		Usage:  "Manage multi-cluster networks",
@@ -30,8 +30,8 @@ func Command(logger *slog.Logger, runner execx.Runner, reconcileDNS func(context
 			detachCommand(logger, runner),
 			deleteCommand(logger, runner),
 			configCommand(),
-			peerCommand(logger, runner, reconcileDNS),
-			unpeerCommand(logger, runner, reconcileDNS),
+			peerCommand(logger, runner, reconcileNetworkDNS),
+			unpeerCommand(logger, runner, reconcileNetworkDNS),
 		},
 	}
 }
@@ -432,7 +432,7 @@ Example:
 	}
 }
 
-func peerCommand(logger *slog.Logger, runner execx.Runner, reconcileDNS func(context.Context) error) *cli.Command {
+func peerCommand(logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS func(context.Context) error) *cli.Command {
 	return &cli.Command{
 		Name:  "peer",
 		Usage: "Establish direct peering between clusters",
@@ -466,13 +466,13 @@ Example:
 			if err := ops.peer(ctx, clusterNames); err != nil {
 				return err
 			}
-			reconcileDNSAfterPeer(ctx, logger, reconcileDNS)
+			reconcileNetworkDNSAfterPeer(ctx, logger, reconcileNetworkDNS)
 			return nil
 		},
 	}
 }
 
-func unpeerCommand(logger *slog.Logger, runner execx.Runner, reconcileDNS func(context.Context) error) *cli.Command {
+func unpeerCommand(logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS func(context.Context) error) *cli.Command {
 	return &cli.Command{
 		Name:  "unpeer",
 		Usage: "Remove direct peering between clusters",
@@ -506,13 +506,13 @@ Example:
 			if err := ops.unpeer(ctx, clusterNames); err != nil {
 				return err
 			}
-			reconcileDNSAfterPeer(ctx, logger, reconcileDNS)
+			reconcileNetworkDNSAfterPeer(ctx, logger, reconcileNetworkDNS)
 			return nil
 		},
 	}
 }
 
-func reconcileDNSAfterPeer(ctx context.Context, logger *slog.Logger, reconcile func(context.Context) error) {
+func reconcileNetworkDNSAfterPeer(ctx context.Context, logger *slog.Logger, reconcile func(context.Context) error) {
 	if reconcile == nil {
 		return
 	}

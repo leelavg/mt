@@ -54,7 +54,6 @@ Publish or remove local-s3 in clusters
 Start the standalone local-s3 service
 
     Starts a standalone container on dfmicro's default bridge network without publishing a host port. Data is kept in a named volume.
-    Requires a cluster-created default bridge network.
 
     Use configure to publish a Service in a cluster.
     The service allows anonymous access until accounts are configured.
@@ -207,7 +206,7 @@ Configure S3 and managed clusters for ODR
 
     Requires local-s3 attached to the hub and both managed clusters. Creates the shared dfmicro-odr bucket.
 
-    For CephFS RDR, run dfmicro ops clusterset sync after the destination ServiceExport appears.
+    For CephFS RDR, run dfmicro ops network --sync-clusterset after the destination ServiceExport appears.
 
 **--managed-cluster**="": ManagedCluster name (repeatable or comma separated)
 
@@ -249,7 +248,7 @@ Create a cluster, wait until ready, and print connection info
       dfmicro cluster create --name odf --lvm-volsize 50G --pull-secret ~/pull-secret.json
       dfmicro cluster create --idms ~/idms-1.yaml --idms ~/idms-2.yaml
 
-**--api-server-ip**="": Additional IPv4 address for API server access (repeatable, e.g. cloud floating IP)
+**--api-server-ip**="": Additional private IPv4 address for API server access (e.g. cloud floating IP)
 
 **--api-server-port**="": Host port to expose the Kubernetes API server on (1024-65535) (default: 6443)
 
@@ -259,13 +258,13 @@ Create a cluster, wait until ready, and print connection info
 
 **--etcd**: Use etcd storage backend (default: SQLite) (default: false)
 
-**--idms**="": Path to an ImageDigestMirrorSet YAML file for mirror registries (repeatable, merged in order)
+**--idms**="": Path to an ImageDigestMirrorSet YAML file for mirror registries (merged in order)
 
 **--image**="": MicroShift container image to run (OKD / SCOS build) (default: ghcr.io/leelavg/microshift:5.1.0_202611161345_g68a5f5e9e_5.1.0_okd_scos.ec.3)
 
 **--lvm-volsize**="": Size of the sparse loop-device image backing the LVM thin pool for TopoLVM (e.g. 10G, 50G) (default: 10G)
 
-**--mount**="": Bind mount in Podman format: /host/path:/container/path[:opts] (repeatable, replaces the same container path)
+**--mount**="": Bind mount in Podman format: /host/path:/container/path[:opts] (replaces the same container path)
 
 **--name**="": Cluster name, used to identify containers and stored config (default: micro)
 
@@ -516,17 +515,13 @@ remove worker node from cluster
 
 Operational utilities for running clusters
 
-### clusterset
+### network
 
-Manage ClusterSet DNS records
+Reconcile DNS records for running clusters
 
-#### delete
+**--sync-clusterset**: Sync exported VolSync ClusterSet DNS entries (default: false)
 
-Remove dfmicro ClusterSet DNS records
-
-#### sync
-
-Reconcile DNS for exported VolSync destination services
+**--sync-routes**: Sync wildcard route DNS entries (default: false)
 
 ### resources
 
@@ -536,7 +531,6 @@ Show CPU and memory requests, limits, and live usage per container (experimental
 
     Examples:
       dfmicro ops resources
-      dfmicro ops resources --tune
       dfmicro ops resources --namespace openshift-operator-lifecycle-manager
       dfmicro ops resources --name dev --node microshift-node-1
 
@@ -545,20 +539,6 @@ Show CPU and memory requests, limits, and live usage per container (experimental
 **--namespace**="": Restrict output to a single namespace (omit for all namespaces)
 
 **--node**="": Restrict output to a single node by name (omit for all nodes)
-
-**--tune**: Apply fixed CPU and memory requests to known controllers (default: false)
-
-### routes
-
-Manage wildcard DNS for cluster routes
-
-#### create
-
-Create route DNS entries for running clusters
-
-#### delete
-
-Remove dfmicro route DNS entries
 
 ### storage
 

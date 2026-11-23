@@ -31,7 +31,8 @@ fi
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT
 archive="${tmp_dir}/volsync-addon-controller.tar.gz"
-chart_dir="${tmp_dir}/source/helmcharts/stable-0.17/volsync"
+chart_channel="stable-${version%.*}"
+chart_dir="${tmp_dir}/source/helmcharts/${chart_channel}/volsync"
 rendered="${tmp_dir}/volsync.yaml"
 
 curl -fsSL --retry 5 "https://github.com/stolostron/volsync-addon-controller/archive/${commit}.tar.gz" -o "${archive}"

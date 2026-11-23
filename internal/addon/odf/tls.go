@@ -184,25 +184,3 @@ func generateClientCertificate(identity string) ([]byte, []byte, time.Time, erro
 	return pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}),
 		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), expires, nil
 }
-
-func (o *odf) patchStorageConsumerTLS(ctx context.Context, providerKubeconfig, clientSAN string) error {
-	patch := fmt.Sprintf(`{"spec":{"clientCAConfigMap":{"name":%q},"clientSAN":%q}}`, o.clusterName, clientSAN)
-	if _, err := o.runner.Run(ctx, support.KubeClient,
-		"patch", "storageconsumer", o.clusterName, "-n", providerNamespace,
-		"--type=merge", "-p", patch, "--kubeconfig", providerKubeconfig,
-	); err != nil {
-		return fmt.Errorf("patch StorageConsumer mTLS fields: %w", err)
-	}
-	return nil
-}
-
-func (o *odf) patchStorageClientTLS(ctx context.Context, providerName string) error {
-	patch := fmt.Sprintf(`{"spec":{"clientCertSecret":{"name":%q},"serverCAConfigMap":{"name":%q,"key":"service-ca.crt"},"serverSAN":%q}}`, providerName, providerName, providerServerSAN)
-	if _, err := o.runner.Run(ctx, support.KubeClient,
-		"patch", "storageclient", providerName,
-		"--type=merge", "-p", patch, "--kubeconfig", o.kubeconfig,
-	); err != nil {
-		return fmt.Errorf("patch StorageClient mTLS fields: %w", err)
-	}
-	return nil
-}

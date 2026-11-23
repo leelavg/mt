@@ -52,40 +52,20 @@ func (o *odr) networkFenceClientCIDRs(ctx context.Context, clusterName, kubeconf
 	var cidrs []string
 	err := support.Poll(ctx, 2*time.Second, 10*time.Minute, func(ctx context.Context) (bool, error) {
 		result, err := o.runner.Run(ctx, support.KubeClient,
-			"get", csiAddonsNodeCRD, "-A", "-o", "json",
+			"get", csiAddonsNodeCRD, "-A",
+			`-o=jsonpath={range .items[*].status.networkFenceClientStatus[*].ClientDetails[*].cidrs[*]}{.}{"\n"}{end}`,
 			"--kubeconfig", kubeconfig,
 		)
 		if err != nil {
 			return false, fmt.Errorf("get CSIAddonsNodes in cluster %q: %w", clusterName, err)
 		}
 
-		var nodes struct {
-			Items []struct {
-				Status struct {
-					NetworkFenceClientStatus []struct {
-						ClientDetails []struct {
-							CIDRs []string `json:"cidrs"`
-						} `json:"ClientDetails"`
-					} `json:"networkFenceClientStatus"`
-				} `json:"status"`
-			} `json:"items"`
-		}
-		if err := json.Unmarshal([]byte(result.Stdout), &nodes); err != nil {
-			return false, fmt.Errorf("decode CSIAddonsNodes in cluster %q: %w", clusterName, err)
-		}
-
 		unique := make(map[string]struct{})
-		for _, node := range nodes.Items {
-			for _, fenceClient := range node.Status.NetworkFenceClientStatus {
-				for _, client := range fenceClient.ClientDetails {
-					for _, cidr := range client.CIDRs {
-						if _, _, err := net.ParseCIDR(cidr); err != nil {
-							return false, fmt.Errorf("invalid network fence client CIDR %q in cluster %q: %w", cidr, clusterName, err)
-						}
-						unique[cidr] = struct{}{}
-					}
-				}
+		for cidr := range strings.FieldsSeq(result.Stdout) {
+			if _, _, err := net.ParseCIDR(cidr); err != nil {
+				return false, fmt.Errorf("invalid network fence client CIDR %q in cluster %q: %w", cidr, clusterName, err)
 			}
+			unique[cidr] = struct{}{}
 		}
 		cidrs = make([]string, 0, len(unique))
 		for cidr := range unique {

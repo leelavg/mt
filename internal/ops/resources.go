@@ -22,7 +22,6 @@ import (
 var defaultName = rootconfig.Load().Name
 
 const internalKubeconfig = "/var/lib/microshift/resources/kubeadmin/kubeconfig"
-const containerKubeClient = "oc"
 const podTemplate = `
 		{{- range .items -}}
 		    {{- $ns := .metadata.namespace -}}
@@ -53,7 +52,6 @@ func resourcesCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 
 Examples:
   dfmicro ops resources
-  dfmicro ops resources --tune
   dfmicro ops resources --namespace openshift-operator-lifecycle-manager
   dfmicro ops resources --name dev --node microshift-node-1`,
 		Flags: []cli.Flag{
@@ -69,10 +67,6 @@ Examples:
 			&cli.StringFlag{
 				Name:  "node",
 				Usage: "Restrict output to a single node by name (omit for all nodes)",
-			},
-			&cli.BoolFlag{
-				Name:  "tune",
-				Usage: "Apply fixed CPU and memory requests to known controllers",
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -91,9 +85,6 @@ Examples:
 				namespace: cmd.String("namespace"),
 				node:      cmd.String("node"),
 			}
-			if cmd.Bool("tune") {
-				return r.tune(ctx)
-			}
 			return r.print(ctx)
 		},
 	}
@@ -109,7 +100,7 @@ type resources struct {
 }
 
 func (r *resources) run(ctx context.Context, args ...string) (execx.Result, error) {
-	command := []string{"exec", r.container, containerKubeClient, "--kubeconfig", internalKubeconfig}
+	command := []string{"exec", r.container, "oc", "--kubeconfig", internalKubeconfig}
 	return support.RunPodmanPrivileged(ctx, r.runner, append(command, args...)...)
 }
 

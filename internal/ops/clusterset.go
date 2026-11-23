@@ -13,8 +13,6 @@ import (
 	rootconfig "dfmicro/internal/config"
 	"dfmicro/internal/execx"
 	"dfmicro/internal/support"
-
-	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -47,39 +45,15 @@ type clusterSetDNSRecord struct {
 	clusterIP string
 }
 
-func clusterSetCommand(dns *clusterSetDNS) *cli.Command {
-	return &cli.Command{
-		Name:   "clusterset",
-		Usage:  "Manage ClusterSet DNS records",
-		Action: support.UnknownSubcommand,
-		Commands: []*cli.Command{
-			{
-				Name:  "sync",
-				Usage: "Reconcile DNS for exported VolSync destination services",
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return dns.reconcile(ctx)
-				},
-			},
-			{
-				Name:  "delete",
-				Usage: "Remove dfmicro ClusterSet DNS records",
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return dns.delete(ctx)
-				},
-			},
-		},
-	}
-}
-
-func (v *clusterSetDNS) reconcile(ctx context.Context) error {
-	clusters, err := runningClusterConfigs(ctx, v.runner)
+func (c *clusterSetDNS) reconcile(ctx context.Context) error {
+	clusters, err := runningClusterConfigs(ctx, c.runner)
 	if err != nil {
 		return err
 	}
 
 	var records []clusterSetDNSRecord
 	for _, cluster := range clusters {
-		clusterRecords, err := v.serviceRecords(ctx, cluster)
+		clusterRecords, err := c.serviceRecords(ctx, cluster)
 		if err != nil {
 			return fmt.Errorf("list VolSync exports in cluster %q: %w", cluster.Name, err)
 		}
@@ -94,34 +68,19 @@ func (v *clusterSetDNS) reconcile(ctx context.Context) error {
 			continue
 		}
 
-		var blocks []string
+		var blocks []coreDNSBlock
 		if len(clusterRecords) > 0 {
-			blocks = []string{clusterSetDNSBlock(clusterRecords)}
+			blocks = []coreDNSBlock{clusterSetDNSBlock(clusterRecords)}
 		}
-		if err := v.update(ctx, cluster, blocks); err != nil {
+		if err := c.update(ctx, cluster, blocks, clusterRecords); err != nil {
 			reconcileErrors = append(reconcileErrors, fmt.Errorf("cluster %s: %w", cluster.Name, err))
 		}
 	}
 	return errors.Join(reconcileErrors...)
 }
 
-func (v *clusterSetDNS) delete(ctx context.Context) error {
-	clusters, err := runningClusterConfigs(ctx, v.runner)
-	if err != nil {
-		return err
-	}
-
-	var deleteErrors []error
-	for _, cluster := range clusters {
-		if err := v.update(ctx, cluster, nil); err != nil {
-			deleteErrors = append(deleteErrors, fmt.Errorf("cluster %s: %w", cluster.Name, err))
-		}
-	}
-	return errors.Join(deleteErrors...)
-}
-
-func (v *clusterSetDNS) serviceRecords(ctx context.Context, cluster rootconfig.ClusterConfig) ([]clusterSetDNSRecord, error) {
-	crd, err := v.run(ctx, cluster,
+func (c *clusterSetDNS) serviceRecords(ctx context.Context, cluster rootconfig.ClusterConfig) ([]clusterSetDNSRecord, error) {
+	crd, err := c.run(ctx, cluster,
 		"get", "crd", serviceExportsCRDName, "--ignore-not-found", "-o=name",
 	)
 	if err != nil {
@@ -131,7 +90,7 @@ func (v *clusterSetDNS) serviceRecords(ctx context.Context, cluster rootconfig.C
 		return nil, nil
 	}
 
-	output, err := v.run(ctx, cluster,
+	output, err := c.run(ctx, cluster,
 		"get", "serviceexports.multicluster.x-k8s.io", "--all-namespaces", "-o", "json",
 	)
 	if err != nil {
@@ -149,7 +108,7 @@ func (v *clusterSetDNS) serviceRecords(ctx context.Context, cluster rootconfig.C
 			continue
 		}
 
-		clusterIP, err := v.run(ctx, cluster,
+		clusterIP, err := c.run(ctx, cluster,
 			"get", "service", export.Metadata.Name, "-n", export.Metadata.Namespace,
 			"--ignore-not-found", "-o=jsonpath={.spec.clusterIP}",
 		)
@@ -158,7 +117,7 @@ func (v *clusterSetDNS) serviceRecords(ctx context.Context, cluster rootconfig.C
 		}
 		clusterIP = strings.TrimSpace(clusterIP)
 		if clusterIP == "" || clusterIP == "None" {
-			v.logger.Warn("skipping VolSync ServiceExport without a service ClusterIP",
+			c.logger.Warn("skipping VolSync ServiceExport without a service ClusterIP",
 				"cluster", cluster.Name, "namespace", export.Metadata.Namespace, "service", export.Metadata.Name)
 			continue
 		}
@@ -198,22 +157,19 @@ func clusterSetPeerRecords(cluster rootconfig.ClusterConfig, records []clusterSe
 	return peerRecords, nil
 }
 
-func clusterSetDNSBlock(records []clusterSetDNSRecord) string {
+func clusterSetDNSBlock(records []clusterSetDNSRecord) coreDNSBlock {
 	var hosts []string
 	for _, record := range records {
 		hosts = append(hosts, fmt.Sprintf("\t\t%s %s", record.clusterIP, record.hostname))
 	}
-	return fmt.Sprintf(`clusterset.local:5353 {
-	hosts {
-		ttl 30
-%s
-		fallthrough
+	return coreDNSBlock{
+		zone: "clusterset.local",
+		body: fmt.Sprintf("\thosts {\n\t\tttl 30\n%s\n\t\tfallthrough\n\t}", strings.Join(hosts, "\n")),
 	}
-}`, strings.Join(hosts, "\n"))
 }
 
-func (v *clusterSetDNS) update(ctx context.Context, cluster rootconfig.ClusterConfig, blocks []string) error {
-	corefile, err := v.run(ctx, cluster,
+func (c *clusterSetDNS) update(ctx context.Context, cluster rootconfig.ClusterConfig, blocks []coreDNSBlock, records []clusterSetDNSRecord) error {
+	corefile, err := c.run(ctx, cluster,
 		"get", "configmap", "dns-default", "-n", "openshift-dns", "-o=jsonpath={.data.Corefile}",
 	)
 	if err != nil {
@@ -225,7 +181,7 @@ func (v *clusterSetDNS) update(ctx context.Context, cluster rootconfig.ClusterCo
 		return err
 	}
 	if !changed {
-		v.logger.Info("ClusterSet DNS is current", "cluster", cluster.Name, "records", recordCount(blocks))
+		c.logger.Info("ClusterSet DNS is current", "cluster", cluster.Name, "records", recordCount(blocks))
 		return nil
 	}
 
@@ -233,39 +189,60 @@ func (v *clusterSetDNS) update(ctx context.Context, cluster rootconfig.ClusterCo
 	if err != nil {
 		return fmt.Errorf("encode ClusterSet DNS patch: %w", err)
 	}
-	v.logger.Info("updating ClusterSet DNS", "cluster", cluster.Name, "records", recordCount(blocks))
-	reloadSince := time.Now().UTC().Format(time.RFC3339Nano)
-	if _, err := v.run(ctx, cluster,
+	c.logger.Info("updating ClusterSet DNS", "cluster", cluster.Name, "records", recordCount(blocks))
+	if _, err := c.run(ctx, cluster,
 		"patch", "configmap", "dns-default", "-n", "openshift-dns", "--type=merge", "-p", string(patch),
 	); err != nil {
 		return fmt.Errorf("patch CoreDNS Corefile: %w", err)
 	}
-	v.logger.Info("waiting for CoreDNS reload", "cluster", cluster.Name)
-	if err := v.waitForReload(ctx, cluster, reloadSince); err != nil {
-		return fmt.Errorf("wait for CoreDNS reload: %w", err)
+	c.logger.Info("waiting for ClusterSet DNS answers", "cluster", cluster.Name)
+	if err := c.waitForDNS(ctx, cluster, records); err != nil {
+		return fmt.Errorf("wait for ClusterSet DNS answers: %w", err)
 	}
-	v.logger.Info("CoreDNS reloaded", "cluster", cluster.Name)
+	c.logger.Info("ClusterSet DNS answers are current", "cluster", cluster.Name)
 	return nil
 }
 
-func (v *clusterSetDNS) waitForReload(ctx context.Context, cluster rootconfig.ClusterConfig, since string) error {
-	return support.Poll(ctx, clusterSetDNSPoll, clusterSetDNSTimeout, func(ctx context.Context) (bool, error) {
-		output, err := v.run(ctx, cluster,
-			"get", "pods", "-n", "openshift-dns", "-l", "dns.operator.openshift.io/daemonset-dns=default", "-o=name",
-		)
-		if err != nil {
-			return false, fmt.Errorf("list CoreDNS pods: %w", err)
-		}
-		pods := strings.Fields(output)
-		if len(pods) == 0 {
-			return false, nil
-		}
+func (c *clusterSetDNS) waitForDNS(ctx context.Context, cluster rootconfig.ClusterConfig, records []clusterSetDNSRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
 
-		for _, pod := range pods {
-			logs, err := v.run(ctx, cluster,
-				"logs", "-n", "openshift-dns", pod, "-c", "dns", "--since-time="+since,
+	pod, err := c.run(ctx, cluster,
+		"get", "pods", "-n", "openshift-dns", "-l", "dns.operator.openshift.io/daemonset-dns=default",
+		"-o=jsonpath={.items[?(@.status.phase==\"Running\")].metadata.name}",
+	)
+	if err != nil {
+		return fmt.Errorf("get CoreDNS pod: %w", err)
+	}
+	pods := strings.Fields(pod)
+	if len(pods) == 0 {
+		return fmt.Errorf("no CoreDNS pod is available")
+	}
+	pod = pods[0]
+
+	dnsIP, err := c.run(ctx, cluster,
+		"get", "service", "dns-default", "-n", "openshift-dns", "-o=jsonpath={.spec.clusterIP}",
+	)
+	if err != nil {
+		return fmt.Errorf("get CoreDNS service IP: %w", err)
+	}
+	dnsIP = strings.TrimSpace(dnsIP)
+	if dnsIP == "" || dnsIP == "None" {
+		return fmt.Errorf("CoreDNS service has no ClusterIP")
+	}
+
+	return support.Poll(ctx, clusterSetDNSPoll, clusterSetDNSTimeout, func(ctx context.Context) (bool, error) {
+		for _, record := range records {
+			answer, err := c.run(ctx, cluster,
+				"exec", "-n", "openshift-dns", pod, "-c", "dns", "--",
+				"dig", "+short", "+time=2", "+tries=1", "@"+dnsIP, record.hostname+".", "A",
 			)
-			if err != nil || !strings.Contains(logs, "Reloading complete") {
+			if err != nil {
+				return false, fmt.Errorf("query %s from dns-default pod %q: %w", record.hostname, pod, err)
+			}
+			answers := strings.Fields(answer)
+			if len(answers) != 1 || answers[0] != record.clusterIP {
 				return false, nil
 			}
 		}
@@ -273,18 +250,18 @@ func (v *clusterSetDNS) waitForReload(ctx context.Context, cluster rootconfig.Cl
 	})
 }
 
-func (v *clusterSetDNS) run(ctx context.Context, cluster rootconfig.ClusterConfig, args ...string) (string, error) {
+func (c *clusterSetDNS) run(ctx context.Context, cluster rootconfig.ClusterConfig, args ...string) (string, error) {
 	command := append([]string{"exec", cluster.NodeName, "oc", "--kubeconfig", internalKubeconfig}, args...)
-	result, err := support.RunPodmanPrivileged(ctx, v.runner, command...)
+	result, err := support.RunPodmanPrivileged(ctx, c.runner, command...)
 	if err != nil {
 		return "", err
 	}
 	return result.Stdout, nil
 }
 
-func recordCount(blocks []string) int {
+func recordCount(blocks []coreDNSBlock) int {
 	if len(blocks) == 0 {
 		return 0
 	}
-	return strings.Count(blocks[0], ".svc.clusterset.local")
+	return strings.Count(blocks[0].body, ".svc.clusterset.local")
 }

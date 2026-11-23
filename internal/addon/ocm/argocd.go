@@ -19,9 +19,6 @@ import (
 //go:embed assets/argocd
 var argocdAssets embed.FS
 
-//go:embed assets/argocd/cluster-secret.yaml.tmpl
-var argocdClusterSecretTmpl string
-
 func (o *ocm) installArgoCD(ctx context.Context, kubeconfig string) error {
 	tmpDir, err := os.MkdirTemp("", "dfmicro-argocd-")
 	if err != nil {

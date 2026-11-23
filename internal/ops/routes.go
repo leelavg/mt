@@ -14,8 +14,6 @@ import (
 	rootconfig "dfmicro/internal/config"
 	"dfmicro/internal/execx"
 	"dfmicro/internal/support"
-
-	"github.com/urfave/cli/v3"
 )
 
 const routeDNSStart = "# dfmicro routes begin"
@@ -31,32 +29,6 @@ type routeCluster struct {
 	ip     string
 }
 
-func routesCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
-	return &cli.Command{
-		Name:   "routes",
-		Usage:  "Manage wildcard DNS for cluster routes",
-		Action: support.UnknownSubcommand,
-		Commands: []*cli.Command{
-			{
-				Name:  "create",
-				Usage: "Create route DNS entries for running clusters",
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					routes := &routeDNS{logger: logger, runner: runner}
-					return routes.reconcile(ctx)
-				},
-			},
-			{
-				Name:  "delete",
-				Usage: "Remove dfmicro route DNS entries",
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					routes := &routeDNS{logger: logger, runner: runner}
-					return routes.delete(ctx)
-				},
-			},
-		},
-	}
-}
-
 func (r *routeDNS) reconcile(ctx context.Context) error {
 	clusters, err := r.runningClusters(ctx)
 	if err != nil {
@@ -65,7 +37,7 @@ func (r *routeDNS) reconcile(ctx context.Context) error {
 
 	var reconcileErrors []error
 	for _, cluster := range clusters {
-		var blocks []string
+		var blocks []coreDNSBlock
 		for _, peer := range clusters {
 			if peer.config.Name == cluster.config.Name || peer.config.BridgeName != cluster.config.BridgeName {
 				continue
@@ -78,21 +50,6 @@ func (r *routeDNS) reconcile(ctx context.Context) error {
 		}
 	}
 	return errors.Join(reconcileErrors...)
-}
-
-func (r *routeDNS) delete(ctx context.Context) error {
-	clusters, err := r.runningClusters(ctx)
-	if err != nil {
-		return err
-	}
-
-	var deleteErrors []error
-	for _, cluster := range clusters {
-		if err := r.update(ctx, cluster, nil); err != nil {
-			deleteErrors = append(deleteErrors, fmt.Errorf("cluster %s: %w", cluster.config.Name, err))
-		}
-	}
-	return errors.Join(deleteErrors...)
 }
 
 func (r *routeDNS) runningClusters(ctx context.Context) ([]routeCluster, error) {
@@ -148,7 +105,7 @@ func runningClusterConfigs(ctx context.Context, runner execx.Runner) ([]rootconf
 	return configs, nil
 }
 
-func (r *routeDNS) update(ctx context.Context, cluster routeCluster, blocks []string) error {
+func (r *routeDNS) update(ctx context.Context, cluster routeCluster, blocks []coreDNSBlock) error {
 	result, err := support.RunPodmanPrivileged(ctx, r.runner,
 		"exec", cluster.config.NodeName,
 		"oc", "--kubeconfig", internalKubeconfig,
@@ -184,21 +141,28 @@ func (r *routeDNS) update(ctx context.Context, cluster routeCluster, blocks []st
 	return nil
 }
 
-func routeDNSBlock(clusterName, ip string) string {
-	zone := "apps." + rootconfig.BaseDomain(clusterName)
-	return fmt.Sprintf(`%s:5353 {
-	template IN A %s {
-		match ^[a-zA-Z0-9-]+\.%s\.$
-		answer "{{ .Name }} 30 IN A %s"
-	}
-}`, zone, zone, regexp.QuoteMeta(zone), ip)
+type coreDNSBlock struct {
+	zone string
+	body string
 }
 
-func reconcileCorefile(corefile string, blocks []string) (string, bool, error) {
+func (b coreDNSBlock) String() string {
+	return fmt.Sprintf("%s:5353 {\n%s\n}", b.zone, b.body)
+}
+
+func routeDNSBlock(clusterName, ip string) coreDNSBlock {
+	zone := "apps." + rootconfig.BaseDomain(clusterName)
+	return coreDNSBlock{
+		zone: zone,
+		body: fmt.Sprintf("\ttemplate IN A %s {\n\t\tmatch ^[a-zA-Z0-9-]+\\.%s\\.$\n\t\tanswer \"{{ .Name }} 30 IN A %s\"\n\t}", zone, regexp.QuoteMeta(zone), ip),
+	}
+}
+
+func reconcileCorefile(corefile string, blocks []coreDNSBlock) (string, bool, error) {
 	return reconcileManagedCorefile(corefile, routeDNSStart, routeDNSEnd, blocks)
 }
 
-func reconcileManagedCorefile(corefile, startMarker, endMarker string, blocks []string) (string, bool, error) {
+func reconcileManagedCorefile(corefile, startMarker, endMarker string, blocks []coreDNSBlock) (string, bool, error) {
 	original := corefile
 	start := strings.Index(corefile, startMarker)
 	end := strings.Index(corefile, endMarker)
@@ -212,7 +176,11 @@ func reconcileManagedCorefile(corefile, startMarker, endMarker string, blocks []
 
 	managed := ""
 	if len(blocks) > 0 {
-		managed = startMarker + "\n" + strings.Join(blocks, "\n\n") + "\n" + endMarker
+		content := make([]string, 0, len(blocks))
+		for _, block := range blocks {
+			content = append(content, block.String())
+		}
+		managed = startMarker + "\n" + strings.Join(content, "\n\n") + "\n" + endMarker
 	}
 	if start != -1 {
 		end += len(endMarker)

@@ -54,8 +54,7 @@ func (o *odf) configureRookProvider(ctx context.Context, includeCephFS bool) err
 	o.logger.Info("CRD established", "name", crd)
 	name := "rook-ceph-operator"
 	o.logger.Info("waiting for CSV", "name", name)
-	csvName, err := waitForCSV(ctx, o.runner, support.KubeClient, o.kubeconfig, name,
-		`jsonpath={.items[?(@.metadata.labels.operators\.coreos\.com/rook-ceph-operator\.openshift-storage)].metadata.name}`)
+	csvName, err := ocp.WaitForCSV(ctx, o.runner, support.KubeClient, o.kubeconfig, providerNamespace, name)
 	if err != nil {
 		return err
 	}
@@ -238,11 +237,25 @@ func (o *odf) configureOdfClient(ctx context.Context, providerName, clusterCIDR,
 	}
 	if ready {
 		o.logger.Info("updating mTLS settings on connected ODF client", "provider", providerName, "client", o.clusterName)
-		if err := o.patchStorageConsumerTLS(ctx, providerKubeconfig, clientSAN); err != nil {
+		consumerTLS, err := support.Render(storageConsumerTLSTmpl, map[string]string{
+			"ClientCluster": o.clusterName,
+			"ClientSAN":     strconv.Quote(clientSAN),
+		})
+		if err != nil {
 			return err
 		}
-		if err := o.patchStorageClientTLS(ctx, providerName); err != nil {
+		if err := support.ApplyYAML(ctx, o.runner, support.KubeClient, providerKubeconfig, consumerTLS); err != nil {
+			return fmt.Errorf("apply StorageConsumer mTLS settings: %w", err)
+		}
+		clientTLS, err := support.Render(storageClientTLSTmpl, map[string]string{
+			"ProviderCluster": providerName,
+			"ServerSAN":       strconv.Quote(providerServerSAN),
+		})
+		if err != nil {
 			return err
+		}
+		if err := support.ApplyYAML(ctx, o.runner, support.KubeClient, o.kubeconfig, clientTLS); err != nil {
+			return fmt.Errorf("apply StorageClient mTLS settings: %w", err)
 		}
 	} else {
 		consumer, err := support.Render(storageConsumerTmpl, map[string]string{

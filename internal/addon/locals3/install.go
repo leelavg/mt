@@ -19,12 +19,12 @@ func (m *manager) install(ctx context.Context, image string) error {
 		return fmt.Errorf("container %q already exists", containerName)
 	}
 
-	if err := m.ensureVolume(ctx); err != nil {
-		return err
-	}
 	config := rootconfig.Load()
 	network := config.BridgeName
 	if err := support.EnsurePodmanNetwork(ctx, m.logger, m.runner, network, config.BridgeSubnet); err != nil {
+		return err
+	}
+	if err := m.ensureVolume(ctx); err != nil {
 		return err
 	}
 	args := []string{
