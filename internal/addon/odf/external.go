@@ -163,6 +163,10 @@ func (o *odf) configureOdfClient(ctx context.Context, providerName, clusterCIDR,
 	if err != nil {
 		return fmt.Errorf("could not load provider kubeconfig for %q: %w", providerName, err)
 	}
+	providerConfig, err := rootconfig.ReadClusterConfig(providerName)
+	if err != nil {
+		return fmt.Errorf("could not load provider cluster config for %q: %w", providerName, err)
+	}
 	crd := "storageconsumers.ocs.openshift.io"
 	o.logger.Info("waiting for provider CRD", "cluster", providerName, "name", crd)
 	if err := ocp.WaitForCRD(ctx, o.runner, support.KubeClient, providerKubeconfig, crd); err != nil {
@@ -223,6 +227,7 @@ func (o *odf) configureOdfClient(ctx context.Context, providerName, clusterCIDR,
 	networkPolicy, err := support.Render(odfClientNetworkPolicyTmpl, map[string]string{
 		"ClientCluster": o.clusterName,
 		"ClientCIDR":    clusterCIDR,
+		"BridgeSubnet":  providerConfig.BridgeSubnet,
 	})
 	if err != nil {
 		return err

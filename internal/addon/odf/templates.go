@@ -523,6 +523,8 @@ spec:
     - from:
         - ipBlock:
             cidr: {{.ClientCIDR}}
+        - ipBlock:
+            cidr: {{.BridgeSubnet}}
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: openshift-storage

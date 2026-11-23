@@ -880,9 +880,9 @@ sub run_selected_level {
 	);
 	my %odf_clusters = (
 		4 => [$first],
-		5 => [$first, $micro],
-		6 => [$first, $micro],
-		7 => [$first, $micro],
+		5 => [$micro, $first],
+		6 => [$micro, $first],
+		7 => [$micro, $first],
 	);
 	finish_level($level, $clusters{$level}, $odf_clusters{$level});
 }

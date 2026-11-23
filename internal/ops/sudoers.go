@@ -15,17 +15,24 @@ import (
 
 const sudoersTemplate = `# %[2]s - passwordless sudo for cluster management
 # Created by: %[2]s ops sudoers create
+# Cluster, node, network, and local-s3 container lifecycle and inspection.
 %[1]s ALL=(root) NOPASSWD: /usr/bin/podman
+# TopoLVM backing image loop-device setup and cleanup.
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/losetup
+# TopoLVM volume-group and logical-volume lifecycle and inspection.
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/vgcreate
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/lvcreate
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/lvremove
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/vgremove
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/vgs
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/lvs
+# TopoLVM device-mapper mapping inspection and cleanup.
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/dmsetup
+# Create sparse TopoLVM backing images.
 %[1]s ALL=(root) NOPASSWD: /usr/bin/truncate
+# ODF addon kernel-module load and unload.
 %[1]s ALL=(root) NOPASSWD: /usr/sbin/modprobe
+# ODF addon writes /etc/modules-load.d/mt-odf.conf and sudoers create installs this file.
 %[1]s ALL=(root) NOPASSWD: /usr/bin/install
 `
 

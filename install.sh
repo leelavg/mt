@@ -11,9 +11,16 @@ log() {
 }
 
 usage() {
-    echo "Usage: install.sh [--list]"
-    echo ""
-    echo "  --list    list available releases without installing"
+	cat <<'EOF'
+Usage: install.sh [--list | --help]
+
+  --list       list available releases without installing
+  -h, --help   show this help
+
+Environment:
+  VERSION      release version or tag to install (default: latest)
+  INSTALL_DIR  directory for the mt binary (default: $HOME/.local/bin)
+EOF
 }
 
 die() {
