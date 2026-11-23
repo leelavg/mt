@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 type multusOps struct {
@@ -297,9 +297,9 @@ func (o *multusOps) labelClusterNodes(ctx context.Context, clusterName string, e
 	if err != nil {
 		return fmt.Errorf("get kubeconfig for cluster %s: %w", clusterName, err)
 	}
-	label := "dfmicro.io/whereabouts-"
+	label := "mt.test/whereabouts-"
 	if enabled {
-		label = "dfmicro.io/whereabouts=enabled"
+		label = "mt.test/whereabouts=enabled"
 	}
 	if _, err := o.runner.Run(ctx, support.KubeClient, "label", "nodes", "--all", label, "--overwrite", "--kubeconfig", kubeconfig); err != nil {
 		return fmt.Errorf("label nodes for cluster %s: %w", clusterName, err)

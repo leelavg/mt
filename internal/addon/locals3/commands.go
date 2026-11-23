@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -22,7 +22,7 @@ func Command(logger *slog.Logger, runner execx.Runner) *cli.Command {
 			{
 				Name:  "install",
 				Usage: "Start the standalone local-s3 service",
-				UsageText: `Starts a standalone container on dfmicro's default bridge network without publishing a host port. Data is kept in a named volume.
+				UsageText: `Starts a standalone container on mt's default bridge network without publishing a host port. Data is kept in a named volume.
 
 Use configure to publish a Service in a cluster.
 The service allows anonymous access until accounts are configured.`,
@@ -44,8 +44,8 @@ The service allows anonymous access until accounts are configured.`,
 				MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
 					{
 						Flags: [][]cli.Flag{
-							{&cli.StringSliceFlag{Name: "attach-to", Usage: "Attach local-s3 to these dfmicro clusters"}},
-							{&cli.StringSliceFlag{Name: "detach-from", Usage: "Remove local-s3 from these dfmicro clusters"}},
+							{&cli.StringSliceFlag{Name: "attach-to", Usage: "Attach local-s3 to these mt clusters"}},
+							{&cli.StringSliceFlag{Name: "detach-from", Usage: "Remove local-s3 from these mt clusters"}},
 						},
 						Required: true,
 					},

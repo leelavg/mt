@@ -8,8 +8,8 @@ metadata:
   name: topolvm-lvmd-{{.NodeName}}
   namespace: topolvm-system
   labels:
-    app.kubernetes.io/created-by: dfmicro
-    dfmicro.io/topolvm-node: "{{.NodeName}}"
+    app.kubernetes.io/created-by: mt
+    mt.test/topolvm-node: "{{.NodeName}}"
 data:
   lvmd.yaml: |
     socket-name: /run/topolvm/lvmd.sock
@@ -38,8 +38,8 @@ metadata:
     app.kubernetes.io/instance: topolvm
     app.kubernetes.io/version: "0.42.1"
     app.kubernetes.io/managed-by: Helm
-    dfmicro.io/topolvm-node: '{{.NodeName}}'
-    app.kubernetes.io/created-by: dfmicro
+    mt.test/topolvm-node: '{{.NodeName}}'
+    app.kubernetes.io/created-by: mt
 spec:
   selector:
     matchLabels:
@@ -47,7 +47,7 @@ spec:
       app.kubernetes.io/component: lvmd
       app.kubernetes.io/name: topolvm
       app.kubernetes.io/instance: topolvm
-      dfmicro.io/topolvm-node: '{{.NodeName}}'
+      mt.test/topolvm-node: '{{.NodeName}}'
   template:
     metadata:
       labels:
@@ -55,7 +55,7 @@ spec:
         app.kubernetes.io/component: lvmd
         app.kubernetes.io/name: topolvm
         app.kubernetes.io/instance: topolvm
-        dfmicro.io/topolvm-node: '{{.NodeName}}'
+        mt.test/topolvm-node: '{{.NodeName}}'
       annotations:
         prometheus.io/port: metrics
     spec:

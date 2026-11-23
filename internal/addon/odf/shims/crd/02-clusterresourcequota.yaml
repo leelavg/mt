@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: clusterresourcequotas.quota.openshift.io
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   group: quota.openshift.io
   names:

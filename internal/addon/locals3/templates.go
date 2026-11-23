@@ -7,8 +7,8 @@ metadata:
   namespace: default
   labels:
     app.kubernetes.io/name: local-s3
-    app.kubernetes.io/part-of: dfmicro-local-s3
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/part-of: mt-local-s3
+    app.kubernetes.io/created-by: mt
 spec:
   ports:
   - name: s3
@@ -23,10 +23,10 @@ metadata:
   namespace: default
   labels:
     kubernetes.io/service-name: s3
-    endpointslice.kubernetes.io/managed-by: dfmicro
+    endpointslice.kubernetes.io/managed-by: mt
     app.kubernetes.io/name: local-s3
-    app.kubernetes.io/part-of: dfmicro-local-s3
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/part-of: mt-local-s3
+    app.kubernetes.io/created-by: mt
 addressType: IPv4
 ports:
 - name: s3

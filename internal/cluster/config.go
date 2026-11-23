@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	rootconfig "dfmicro/internal/config"
+	rootconfig "mt/internal/config"
 
 	"github.com/urfave/cli/v3"
 )

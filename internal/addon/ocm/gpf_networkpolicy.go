@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"strconv"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
-const gpfHubAPIEgressName = "dfmicro-gpf-host-api-egress"
+const gpfHubAPIEgressName = "mt-gpf-host-api-egress"
 
 func (o *ocm) allowGPFHubAPI(ctx context.Context, hubKubeconfig, spoke, apiServer string) error {
 	endpoint, err := url.Parse(apiServer)

@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -40,7 +40,7 @@ func listCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 	return &cli.Command{
 		Name:    "list",
 		Aliases: []string{"ls"},
-		Usage:   "List dfmicro networks",
+		Usage:   "List mt networks",
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			return newBridgeManager(logger, runner).list(ctx)
 		},
@@ -62,7 +62,7 @@ func connectCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Connect one or more clusters to a bridge network.
 
 Example:
-  dfmicro network connect --cluster first --cluster second --to backbone`,
+  mt network connect --cluster first --cluster second --to backbone`,
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:      "cluster",
@@ -91,7 +91,7 @@ func disconnectCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Disconnect one or more clusters from a bridge network.
 
 Example:
-  dfmicro network disconnect --cluster first --cluster second --from backbone`,
+  mt network disconnect --cluster first --cluster second --from backbone`,
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:      "cluster",
@@ -120,7 +120,7 @@ func createCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Create a bridge network that clusters can attach to.
 
 Example:
-  dfmicro network create --name backbone --group-count 5 --subnet 172.30.0.0/16`,
+  mt network create --name backbone --group-count 5 --subnet 172.30.0.0/16`,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "name",
@@ -208,7 +208,7 @@ func attachCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Attach one or more clusters to a bridge network.
 
 Example:
-  dfmicro network attach --cluster first:gp1 --cluster second:gp2 --cluster third:gp1/gp2 --to backbone`,
+  mt network attach --cluster first:gp1 --cluster second:gp2 --cluster third:gp1/gp2 --to backbone`,
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:     "cluster",
@@ -286,7 +286,7 @@ func detachCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Detach one or more clusters from a bridge network.
 
 Example:
-  dfmicro network detach --cluster first:gp1 --cluster second:gp2 --from backbone`,
+  mt network detach --cluster first:gp1 --cluster second:gp2 --from backbone`,
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:     "cluster",
@@ -371,7 +371,7 @@ func deleteCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Delete a bridge network.
 
 Example:
-  dfmicro network delete --name backbone`,
+  mt network delete --name backbone`,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "name",
@@ -394,7 +394,7 @@ func configCommand() *cli.Command {
 		UsageText: `Show bridge and IPAM state for a network.
 
 Example:
-  dfmicro network config --name backbone`,
+  mt network config --name backbone`,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "name",
@@ -439,7 +439,7 @@ func peerCommand(logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS f
 		UsageText: `Establish direct peering between clusters.
 
 Example:
-  dfmicro network peer --cluster first --cluster second`,
+  mt network peer --cluster first --cluster second`,
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:     "cluster",
@@ -479,7 +479,7 @@ func unpeerCommand(logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS
 		UsageText: `Remove direct peering between clusters.
 
 Example:
-  dfmicro network unpeer --cluster first --cluster second`,
+  mt network unpeer --cluster first --cluster second`,
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:     "cluster",

@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: packagemanifests.packages.operators.coreos.com
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   group: packages.operators.coreos.com
   names:

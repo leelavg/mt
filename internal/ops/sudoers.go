@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -93,8 +93,8 @@ func deleteSudoers(ctx context.Context, logger *slog.Logger, runner execx.Runner
 func sudoersCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 	return &cli.Command{
 		Name:  "sudoers",
-		Usage: "Manage passwordless sudo configuration for dfmicro (Linux only)",
-		UsageText: `Writes /etc/sudoers.d/dfmicro with the commands used by dfmicro requiring elevated access.
+		Usage: "Manage passwordless sudo configuration for mt (Linux only)",
+		UsageText: `Writes /etc/sudoers.d/mt with the commands used by mt requiring elevated access.
 
 No-op on macOS: rootful Podman machine runs as root so no sudoers entry is needed.
 
@@ -103,14 +103,14 @@ Warning: these rules allow any process running as your user to invoke the listed
 		Commands: []*cli.Command{
 			{
 				Name:  "create",
-				Usage: "Write /etc/sudoers.d/dfmicro for the current user",
+				Usage: "Write /etc/sudoers.d/mt for the current user",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return createSudoers(ctx, logger, runner)
 				},
 			},
 			{
 				Name:      "delete",
-				Usage:     "Remove /etc/sudoers.d/dfmicro",
+				Usage:     "Remove /etc/sudoers.d/mt",
 				UsageText: "Removes the sudoers file created by 'sudoers create'. On macOS this is a no-op.",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return deleteSudoers(ctx, logger, runner)

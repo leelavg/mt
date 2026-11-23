@@ -6,7 +6,7 @@ metadata:
   name: {{.Name}}
   namespace: {{.Namespace}}
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   config: |
     {

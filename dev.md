@@ -4,12 +4,12 @@
 
 - Go 1.26+
 - rootful Podman (Linux) or rootful Podman machine (macOS)
-- `sudo` access, or run `dfmicro ops sudoers create` once
+- `sudo` access, or run `mt ops sudoers create` once
 
 ## Build
 
 ```
-make build          # fmt, vet, generate, compile -> bin/dfmicro
+make build          # fmt, vet, generate, compile -> bin/mt
 make build-release  # same with -trimpath -s -w (stripped)
 make build-analyze  # same with -trimpath only (readable by gsa)
 make lint           # golangci-lint with Revive
@@ -37,13 +37,13 @@ make docs-serve
 Run the Perl suite on a clean Linux host with rootful Podman:
 
 ```
-DFMICRO_BIN=./bin/dfmicro perl tests.pl --upto 8
+MT_BIN=./bin/mt perl tests.pl --upto 8
 ```
 
 Levels 4-7 require a local `tests.conf`, copied from `tests.conf.example`.
 
 Run `./tests.pl -h` for the available levels, filters, cleanup, and timeout
-options. Test output and executed commands are written to `/tmp/dfmicro-test`.
+options. Test output and executed commands are written to `/tmp/mt-test`.
 
 ## Design decisions
 
@@ -71,7 +71,7 @@ suite on a clean Linux host with the local test configuration:
 ```
 make build
 git diff --check
-DFMICRO_BIN=./bin/dfmicro perl tests.pl --upto 8
+MT_BIN=./bin/mt perl tests.pl --upto 8
 ```
 
 After committing the release changes, push a version tag. GoReleaser builds

@@ -7,7 +7,7 @@ metadata:
   namespace: argocd
   labels:
     argocd.argoproj.io/secret-type: cluster
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 stringData:
   name: {{.ClusterName}}
   server: {{.Server}}
@@ -20,7 +20,7 @@ metadata:
   name: {{.Name}}
   namespace: {{.Spoke}}
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   workload:
     manifests:
@@ -30,7 +30,7 @@ spec:
         name: {{.Name}}
         namespace: open-cluster-management-agent-addon
         labels:
-          app.kubernetes.io/created-by: dfmicro
+          app.kubernetes.io/created-by: mt
       spec:
         podSelector:
           matchLabels:

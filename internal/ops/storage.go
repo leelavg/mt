@@ -8,8 +8,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -17,9 +17,9 @@ import (
 func storageCommand(runner execx.Runner) *cli.Command {
 	return &cli.Command{
 		Name:  "storage",
-		Usage: "Show storage paths for all dfmicro clusters",
+		Usage: "Show storage paths for all mt clusters",
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			result, err := support.RunPodmanPrivileged(ctx, runner, "ps", "--all", "--filter", "label=created-by=dfmicro", "--format", "json")
+			result, err := support.RunPodmanPrivileged(ctx, runner, "ps", "--all", "--filter", "label=created-by=mt", "--format", "json")
 			if err != nil {
 				return err
 			}

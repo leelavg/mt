@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: serviceexports.multicluster.x-k8s.io
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   group: multicluster.x-k8s.io
   scope: Namespaced

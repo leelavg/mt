@@ -3,6 +3,6 @@ kind: DNS
 metadata:
   name: cluster
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   baseDomain: {{.BaseDomain}}

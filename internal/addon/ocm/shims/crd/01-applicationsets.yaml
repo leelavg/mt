@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: applicationsets.argoproj.io
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   group: argoproj.io
   names:

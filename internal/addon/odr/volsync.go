@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"dfmicro/internal/addon/ocp"
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/support"
+	"mt/internal/addon/ocp"
+	rootconfig "mt/internal/config"
+	"mt/internal/support"
 )
 
 func (o *odr) installVolSync(ctx context.Context, clusterName string) error {

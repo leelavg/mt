@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/support"
 )
 
 func (m *manager) install(ctx context.Context, image string) error {
@@ -30,7 +30,7 @@ func (m *manager) install(ctx context.Context, image string) error {
 	args := []string{
 		"run", "--detach", "--name", containerName,
 		"--network", network,
-		"--label", "created-by=dfmicro",
+		"--label", "created-by=mt",
 		"--volume", volumeName + ":/data",
 		"--env", "S3_DATA_DIR=/data",
 		image,

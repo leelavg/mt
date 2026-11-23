@@ -1,30 +1,30 @@
 # NAME
 
-dfmicro - Run MicroShift clusters in rootful Podman containers
+mt - Run MicroShift clusters in rootful Podman containers
 
 # SYNOPSIS
 
-dfmicro
+mt
 
 # DESCRIPTION
 
-dfmicro creates and manages single- and multi-node MicroShift clusters inside rootful Podman containers.
+mt creates and manages single- and multi-node MicroShift clusters inside rootful Podman containers.
 Each cluster gets its own Podman network and a loop-device backed LVM thin pool for TopoLVM storage.
 
 Verified on: Linux (Fedora / RHEL)
 Best-effort support: macOS (requires rootful Podman machine via 'podman machine init --rootful')
 
 Quick start:
-  dfmicro ops sudoers create                   # one-time: passwordless sudo for cluster tools
-  dfmicro cluster create                       # create cluster with default name
-  dfmicro cluster kubeconfig > ~/.kube/config  # overwrites kubeconfig!
+  mt ops sudoers create                   # one-time: passwordless sudo for cluster tools
+  mt cluster create                       # create cluster with default name
+  mt cluster kubeconfig > ~/.kube/config  # overwrites kubeconfig!
   kubectl get nodes
-  dfmicro cluster delete                       # tear everything down
+  mt cluster delete                       # tear everything down
 
 **Usage**:
 
 ```
-dfmicro [GLOBAL OPTIONS] [command [COMMAND OPTIONS]] [ARGUMENTS...]
+mt [GLOBAL OPTIONS] [command [COMMAND OPTIONS]] [ARGUMENTS...]
 ```
 
 # COMMANDS
@@ -45,15 +45,15 @@ Publish or remove local-s3 in clusters
 
 >Cluster names can be repeated or comma-separated.
 
-**--attach-to**="": Attach local-s3 to these dfmicro clusters
+**--attach-to**="": Attach local-s3 to these mt clusters
 
-**--detach-from**="": Remove local-s3 from these dfmicro clusters
+**--detach-from**="": Remove local-s3 from these mt clusters
 
 #### install
 
 Start the standalone local-s3 service
 
-    Starts a standalone container on dfmicro's default bridge network without publishing a host port. Data is kept in a named volume.
+    Starts a standalone container on mt's default bridge network without publishing a host port. Data is kept in a named volume.
 
     Use configure to publish a Service in a cluster.
     The service allows anonymous access until accounts are configured.
@@ -90,10 +90,10 @@ Manage Open Cluster Management
     Use --cluster before the subcommand to select the hub.
 
     Example:
-      dfmicro addon ocm --cluster hub install --version 5.0.0
-      dfmicro addon ocm --cluster hub configure --spoke spoke --addon governance-policy-framework,argocd
-      dfmicro addon ocm --cluster hub configure --addon application-manager
-      dfmicro addon ocm --list-addons
+      mt addon ocm --cluster hub install --version 5.0.0
+      mt addon ocm --cluster hub configure --spoke spoke --addon governance-policy-framework,argocd
+      mt addon ocm --cluster hub configure --addon application-manager
+      mt addon ocm --list-addons
 
 **--cluster**="": Hub cluster for OCM operations (default: micro)
 
@@ -107,7 +107,7 @@ Join spokes and configure OCM addons
     With --addon and no --spoke, it installs the addon on the hub only.
 
     Example:
-      dfmicro addon ocm --cluster hub configure --spoke spoke1,spoke2 --addon governance-policy-framework,application-manager,argocd
+      mt addon ocm --cluster hub configure --spoke spoke1,spoke2 --addon governance-policy-framework,application-manager,argocd
 
 **--addon**="": Addon to configure on the hub and selected spokes
 
@@ -151,10 +151,10 @@ Configure ODF to run on MicroShift
 
 Install ODF and required shim resources
 
-    Requires rbd, ceph, nbd kernel modules loaded on the host. Run 'dfmicro addon odf modules load' first.
+    Requires rbd, ceph, nbd kernel modules loaded on the host. Run 'mt addon odf modules load' first.
 
     Example:
-      dfmicro addon odf install --catalog-image quay.io/example/odf-operator-catalog:v5.0 --channel stable-5.0 --version 5.0.0
+      mt addon odf install --catalog-image quay.io/example/odf-operator-catalog:v5.0 --channel stable-5.0 --version 5.0.0
 
 **--catalog-image**="": Catalog source image
 
@@ -185,8 +185,8 @@ Uninstall ODF and all associated resources
     Prints the cleanup commands by default. Pass --attempt to execute them (best-effort).
 
     Examples:
-      dfmicro addon odf uninstall            # dry-run: print commands
-      dfmicro addon odf uninstall --attempt  # execute cleanup
+      mt addon odf uninstall            # dry-run: print commands
+      mt addon odf uninstall --attempt  # execute cleanup
 
 **--attempt**: Execute the delete commands instead of printing them (best-effort) (default: false)
 
@@ -204,9 +204,9 @@ Manage OpenShift Data Foundation disaster recovery
 
 Configure S3 and managed clusters for ODR
 
-    Requires local-s3 attached to the hub and both managed clusters. Creates the shared dfmicro-odr bucket.
+    Requires local-s3 attached to the hub and both managed clusters. Creates the shared mt-odr bucket.
 
-    For CephFS RDR, run dfmicro ops network --sync-clusterset after the destination ServiceExport appears.
+    For CephFS RDR, run mt ops network --sync-clusterset after the destination ServiceExport appears.
 
 **--managed-cluster**="": ManagedCluster name (repeatable or comma separated)
 
@@ -243,10 +243,10 @@ Create a cluster, wait until ready, and print connection info
     Mounts flags are immutable after creation. Delete and recreate to change them.
 
     Examples:
-      dfmicro cluster create
-      dfmicro cluster create --name dev
-      dfmicro cluster create --name odf --lvm-volsize 50G --pull-secret ~/pull-secret.json
-      dfmicro cluster create --idms ~/idms-1.yaml --idms ~/idms-2.yaml
+      mt cluster create
+      mt cluster create --name dev
+      mt cluster create --name odf --lvm-volsize 50G --pull-secret ~/pull-secret.json
+      mt cluster create --idms ~/idms-1.yaml --idms ~/idms-2.yaml
 
 **--api-server-ip**="": Additional private IPv4 address for API server access (e.g. cloud floating IP)
 
@@ -308,8 +308,8 @@ Print kubeconfig for a cluster
 
     Pipe to a file or merge into an existing kubeconfig:
 
-      dfmicro cluster kubeconfig > ~/.kube/config
-      dfmicro cluster kubeconfig | KUBECONFIG=~/.kube/config:- kubectl config view --merge --flatten > merged.yaml
+      mt cluster kubeconfig > ~/.kube/config
+      mt cluster kubeconfig | KUBECONFIG=~/.kube/config:- kubectl config view --merge --flatten > merged.yaml
 
 **--name**="": Cluster name (default: micro)
 
@@ -348,11 +348,11 @@ Print the embedded default configuration as JSON
 
 Print full command reference as markdown
 
->dfmicro docs > cli.md
+>mt docs > cli.md
 
 **--examples**: Print command examples (default: false)
 
-**--skill**: Print agent guidance for operating dfmicro (default: false)
+**--skill**: Print agent guidance for operating mt (default: false)
 
 ## network
 
@@ -365,7 +365,7 @@ Attach clusters to a network
     Attach one or more clusters to a bridge network.
 
     Example:
-      dfmicro network attach --cluster first:gp1 --cluster second:gp2 --cluster third:gp1/gp2 --to backbone
+      mt network attach --cluster first:gp1 --cluster second:gp2 --cluster third:gp1/gp2 --to backbone
 
 **--cluster**="": Cluster name with optional groups (name[:group1[/group2,...]]). Without group, cluster joins 'default'
 
@@ -380,7 +380,7 @@ Show bridge and IPAM configuration
     Show bridge and IPAM state for a network.
 
     Example:
-      dfmicro network config --name backbone
+      mt network config --name backbone
 
 **--name**="": Network name
 
@@ -391,7 +391,7 @@ Connect clusters to a bridge network
     Connect one or more clusters to a bridge network.
 
     Example:
-      dfmicro network connect --cluster first --cluster second --to backbone
+      mt network connect --cluster first --cluster second --to backbone
 
 **--cluster**="": Cluster name (repeatable)
 
@@ -404,7 +404,7 @@ Create a bridge network for multi-cluster interconnect
     Create a bridge network that clusters can attach to.
 
     Example:
-      dfmicro network create --name backbone --group-count 5 --subnet 172.30.0.0/16
+      mt network create --name backbone --group-count 5 --subnet 172.30.0.0/16
 
 **--cluster-count**="": Number of clusters per IPAM group (default: 5)
 
@@ -423,7 +423,7 @@ Delete a bridge network
     Delete a bridge network.
 
     Example:
-      dfmicro network delete --name backbone
+      mt network delete --name backbone
 
 **--name**="": Network name
 
@@ -434,7 +434,7 @@ Detach clusters from a network
     Detach one or more clusters from a bridge network.
 
     Example:
-      dfmicro network detach --cluster first:gp1 --cluster second:gp2 --from backbone
+      mt network detach --cluster first:gp1 --cluster second:gp2 --from backbone
 
 **--cluster**="": Cluster name with optional groups (name[:group1[,group2,...]]). Without group, detaches from 'default'
 
@@ -449,7 +449,7 @@ Disconnect clusters from a bridge network
     Disconnect one or more clusters from a bridge network.
 
     Example:
-      dfmicro network disconnect --cluster first --cluster second --from backbone
+      mt network disconnect --cluster first --cluster second --from backbone
 
 **--cluster**="": Cluster name (repeatable)
 
@@ -457,7 +457,7 @@ Disconnect clusters from a bridge network
 
 ### list, ls
 
-List dfmicro networks
+List mt networks
 
 ### peer
 
@@ -466,7 +466,7 @@ Establish direct peering between clusters
     Establish direct peering between clusters.
 
     Example:
-      dfmicro network peer --cluster first --cluster second
+      mt network peer --cluster first --cluster second
 
 **--cluster**="": Cluster name (repeatable, at least 2 required)
 
@@ -477,7 +477,7 @@ Remove direct peering between clusters
     Remove direct peering between clusters.
 
     Example:
-      dfmicro network unpeer --cluster first --cluster second
+      mt network unpeer --cluster first --cluster second
 
 **--cluster**="": Cluster name (repeatable, at least 2 required)
 
@@ -530,9 +530,9 @@ Show CPU and memory requests, limits, and live usage per container (experimental
     Experimental: output format and flags may change. Use --namespace to scope and improve performance.
 
     Examples:
-      dfmicro ops resources
-      dfmicro ops resources --namespace openshift-operator-lifecycle-manager
-      dfmicro ops resources --name dev --node microshift-node-1
+      mt ops resources
+      mt ops resources --namespace openshift-operator-lifecycle-manager
+      mt ops resources --name dev --node microshift-node-1
 
 **--name**="": Cluster name (default: micro)
 
@@ -542,13 +542,13 @@ Show CPU and memory requests, limits, and live usage per container (experimental
 
 ### storage
 
-Show storage paths for all dfmicro clusters
+Show storage paths for all mt clusters
 
 ### sudoers
 
-Manage passwordless sudo configuration for dfmicro (Linux only)
+Manage passwordless sudo configuration for mt (Linux only)
 
-    Writes /etc/sudoers.d/dfmicro with the commands used by dfmicro requiring elevated access.
+    Writes /etc/sudoers.d/mt with the commands used by mt requiring elevated access.
 
     No-op on macOS: rootful Podman machine runs as root so no sudoers entry is needed.
 
@@ -556,10 +556,10 @@ Manage passwordless sudo configuration for dfmicro (Linux only)
 
 #### create
 
-Write /etc/sudoers.d/dfmicro for the current user
+Write /etc/sudoers.d/mt for the current user
 
 #### delete
 
-Remove /etc/sudoers.d/dfmicro
+Remove /etc/sudoers.d/mt
 
 >Removes the sudoers file created by 'sudoers create'. On macOS this is a no-op.

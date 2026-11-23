@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"dfmicro/internal/addon/ocp"
-	"dfmicro/internal/support"
+	"mt/internal/addon/ocp"
+	"mt/internal/support"
 )
 
 type configureConfig struct {

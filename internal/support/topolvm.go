@@ -14,8 +14,8 @@ import (
 	"text/template"
 	"time"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
 )
 
 //go:embed topolvm-assets/*
@@ -232,7 +232,7 @@ func (t *TopoLVMMgr) DeleteNodeResources(ctx context.Context, controlNode, nodeN
 	if !t.Enabled() {
 		return nil
 	}
-	_, err := RunPodmanPrivileged(ctx, t.runner, "exec", controlNode, "oc", "-n", "topolvm-system", "delete", "daemonset,configmap", "-l", "dfmicro.io/topolvm-node="+nodeName, "--ignore-not-found")
+	_, err := RunPodmanPrivileged(ctx, t.runner, "exec", controlNode, "oc", "-n", "topolvm-system", "delete", "daemonset,configmap", "-l", "mt.test/topolvm-node="+nodeName, "--ignore-not-found")
 	return err
 }
 

@@ -32,12 +32,12 @@
 - VM access: cluster running in a VM should be reachable from the local machine without manual kubeconfig or cert fixups
 - Overlayfs deadlock: fix kubeconfig copy race condition that triggers machine restart on rapid file access (antivirus was the issue)
 - Multus configuration: secondary network attachment for storage traffic isolation in various groups via VLANs
-- Network listing: show names of saved dfmicro bridge networks
+- Network listing: show names of saved mt bridge networks
 - Multi-node clusters: worker onboarding, readiness gating, and node slot reuse
 - Whereabouts IPAM: cluster-wide secondary network allocation across worker nodes
 - Build metadata and examples: UTC version timestamp and tested MicroShift image defaults
 - cluster peering for non-overlapping service and cluster ip ranges
-- cluster-specific route base domains under `<cluster>.dfmicro.io`
+- cluster-specific route base domains under `<cluster>.mt.test`
 - ODF storage topologies: Rook Ceph provider with external consumer, and ODF provider with client-only consumer
 - Test suite levels 4-6: single-node ODF, external storage, and multi-node provider/client PVC read-write coverage
 - OCM configuration: join named spokes and install supported addons on the hub and spokes

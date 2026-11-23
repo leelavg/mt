@@ -5,8 +5,8 @@ import (
 	"embed"
 	"slices"
 
-	"dfmicro/internal/addon/ocp"
-	"dfmicro/internal/support"
+	"mt/internal/addon/ocp"
+	"mt/internal/support"
 )
 
 //go:embed shims/crd/*.yaml shims/cr/*.yaml shims/rbac/*.yaml shims/oauth/*.yaml resources/*.yaml

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 const (

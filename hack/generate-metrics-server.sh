@@ -48,11 +48,11 @@ yq -i '
 ' "${tmp_dir}/components.yaml"
 yq -i '
 	(.metadata.labels = (.metadata.labels // {})) |
-	.metadata.labels."app.kubernetes.io/created-by" = "dfmicro"
+	.metadata.labels."app.kubernetes.io/created-by" = "mt"
 ' "${tmp_dir}/components.yaml"
 yq -i '
 	select(.kind == "Deployment" and .metadata.name == "metrics-server") |= (
-		.spec.template.metadata.labels."app.kubernetes.io/created-by" = "dfmicro"
+		.spec.template.metadata.labels."app.kubernetes.io/created-by" = "mt"
 	)
 ' "${tmp_dir}/components.yaml"
 

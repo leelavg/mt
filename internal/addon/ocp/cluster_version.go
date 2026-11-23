@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 //go:embed assets/cluster-version-crd.yaml
@@ -73,7 +73,7 @@ kind: ClusterVersion
 metadata:
   name: version
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   channel: {{.Channel}}
   clusterID: {{.ClusterID}}

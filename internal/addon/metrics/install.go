@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 //go:embed assets/components.yaml
@@ -60,7 +60,7 @@ func (m *metrics) uninstall(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read Metrics Server manifest: %w", err)
 	}
-	f, err := os.CreateTemp("", "dfmicro-metrics-server-*.yaml")
+	f, err := os.CreateTemp("", "mt-metrics-server-*.yaml")
 	if err != nil {
 		return fmt.Errorf("create temporary Metrics Server manifest: %w", err)
 	}

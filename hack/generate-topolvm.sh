@@ -76,10 +76,10 @@ EOF
 yq -i 'del(.webhooks[].clientConfig.caBundle)' "${rendered}/02-topolvm.yaml"
 yq 'select(.kind == "DaemonSet" and .metadata.name == "topolvm-lvmd-0") |
 	.metadata.name = "topolvm-lvmd-{{.NodeName}}" |
-	.metadata.labels."dfmicro.io/topolvm-node" = "{{.NodeName}}" |
-	.metadata.labels."app.kubernetes.io/created-by" = "dfmicro" |
-	.spec.selector.matchLabels."dfmicro.io/topolvm-node" = "{{.NodeName}}" |
-  .spec.template.metadata.labels."dfmicro.io/topolvm-node" = "{{.NodeName}}" |
+	.metadata.labels."mt.test/topolvm-node" = "{{.NodeName}}" |
+	.metadata.labels."app.kubernetes.io/created-by" = "mt" |
+	.spec.selector.matchLabels."mt.test/topolvm-node" = "{{.NodeName}}" |
+  .spec.template.metadata.labels."mt.test/topolvm-node" = "{{.NodeName}}" |
   del(.spec.template.metadata.annotations."checksum/config") |
   .spec.template.spec.nodeSelector."kubernetes.io/hostname" = "{{.NodeName}}" |
 	(.spec.template.spec.volumes[] | select(.name == "config").configMap.name) = "topolvm-lvmd-{{.NodeName}}" |
@@ -117,8 +117,8 @@ metadata:
   name: topolvm-lvmd-{{.NodeName}}
   namespace: topolvm-system
   labels:
-    app.kubernetes.io/created-by: dfmicro
-    dfmicro.io/topolvm-node: "{{.NodeName}}"
+    app.kubernetes.io/created-by: mt
+    mt.test/topolvm-node: "{{.NodeName}}"
 data:
   lvmd.yaml: |
     socket-name: /run/topolvm/lvmd.sock

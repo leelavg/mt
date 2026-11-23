@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"dfmicro/internal/execx"
+	"mt/internal/execx"
 )
 
 const containerNetworkInterfaceTemplate = `
@@ -75,7 +75,7 @@ func EnsurePodmanNetwork(ctx context.Context, logger *slog.Logger, runner execx.
 		return nil
 	}
 	logger.Info("creating podman network", "network", name, "subnet", subnet)
-	args := []string{"network", "create", "--label", "created-by=dfmicro"}
+	args := []string{"network", "create", "--label", "created-by=mt"}
 	if subnet != "" {
 		args = append(args, "--subnet", subnet)
 	}

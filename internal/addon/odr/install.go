@@ -5,8 +5,8 @@ import (
 	"embed"
 	"fmt"
 
-	"dfmicro/internal/addon/ocp"
-	"dfmicro/internal/support"
+	"mt/internal/addon/ocp"
+	"mt/internal/support"
 )
 
 //go:embed assets/*.yaml assets/velero-crds/*.yaml shims/crd/*.yaml shims/rbac/*.yaml shims/velero/crd/*.yaml shims/volsync/crd/*.yaml shims/volsync/cr/*.yaml

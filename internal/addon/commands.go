@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 
-	"dfmicro/internal/addon/locals3"
-	"dfmicro/internal/addon/metrics"
-	"dfmicro/internal/addon/ocm"
-	"dfmicro/internal/addon/odf"
-	"dfmicro/internal/addon/odr"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/addon/locals3"
+	"mt/internal/addon/metrics"
+	"mt/internal/addon/ocm"
+	"mt/internal/addon/odf"
+	"mt/internal/addon/odr"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )

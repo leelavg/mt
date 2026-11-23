@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"os"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -174,10 +174,10 @@ func Command(logger *slog.Logger, runner execx.Runner, reconcileNetworkDNS func(
 				UsageText: `Mounts flags are immutable after creation. Delete and recreate to change them.
 
 Examples:
-  dfmicro cluster create
-  dfmicro cluster create --name dev
-  dfmicro cluster create --name odf --lvm-volsize 50G --pull-secret ~/pull-secret.json
-  dfmicro cluster create --idms ~/idms-1.yaml --idms ~/idms-2.yaml`,
+  mt cluster create
+  mt cluster create --name dev
+  mt cluster create --name odf --lvm-volsize 50G --pull-secret ~/pull-secret.json
+  mt cluster create --idms ~/idms-1.yaml --idms ~/idms-2.yaml`,
 				Flags: createFlags(),
 				MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
 					{
@@ -303,8 +303,8 @@ Examples:
 				Usage: "Print kubeconfig for a cluster",
 				UsageText: `Pipe to a file or merge into an existing kubeconfig:
 
-  dfmicro cluster kubeconfig > ~/.kube/config
-  dfmicro cluster kubeconfig | KUBECONFIG=~/.kube/config:- kubectl config view --merge --flatten > merged.yaml`,
+  mt cluster kubeconfig > ~/.kube/config
+  mt cluster kubeconfig | KUBECONFIG=~/.kube/config:- kubectl config view --merge --flatten > merged.yaml`,
 				Flags: []cli.Flag{nameFlag()},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					cfg, err := rootconfig.ReadClusterConfig(cmd.String("name"))

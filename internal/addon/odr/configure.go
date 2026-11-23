@@ -6,16 +6,16 @@ import (
 	"strconv"
 	"strings"
 
-	"dfmicro/internal/addon/ocp"
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/support"
+	"mt/internal/addon/ocp"
+	rootconfig "mt/internal/config"
+	"mt/internal/support"
 )
 
 const s3ConfigCRD = "s3configurations.multicluster.odf.openshift.io"
 
 const (
-	s3BucketName         = "dfmicro-odr"
-	localS3ContainerName = "dfmicro-local-s3"
+	s3BucketName         = "mt-odr"
+	localS3ContainerName = "mt-local-s3"
 )
 
 func (o *odr) configure(ctx context.Context, managedClusters []string, peerType string) error {
@@ -152,7 +152,7 @@ func (o *odr) configure(ctx context.Context, managedClusters []string, peerType 
 		}
 	}
 	if peerType == "async" {
-		o.logger.Info("for CephFS RDR, run dfmicro ops network --sync-clusterset after the destination ServiceExport appears")
+		o.logger.Info("for CephFS RDR, run mt ops network --sync-clusterset after the destination ServiceExport appears")
 	}
 	return nil
 }

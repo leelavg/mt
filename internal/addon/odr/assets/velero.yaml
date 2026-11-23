@@ -4,7 +4,7 @@ kind: Namespace
 metadata:
   name: openshift-adp
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 
 # Source: velero/crds/backups.yaml
 ---
@@ -52,21 +52,21 @@ metadata:
     app.kubernetes.io/instance: velero
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 automountServiceAccountToken: true
 ---
 # Source: velero/templates/secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: dfmicro-velero-s3
+  name: mt-velero-s3
   namespace: openshift-adp
   labels:
     app.kubernetes.io/name: velero
     app.kubernetes.io/instance: velero
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 type: Opaque
 data:
   cloud: "W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkPWR1bW15CmF3c19zZWNyZXRfYWNjZXNzX2tleT1kdW1teQo="
@@ -82,7 +82,7 @@ metadata:
     app.kubernetes.io/instance: velero
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 data:
   global: |
     {
@@ -100,7 +100,7 @@ metadata:
     app.kubernetes.io/instance: velero
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 subjects:
   - kind: ServiceAccount
     namespace: openshift-adp
@@ -122,7 +122,7 @@ metadata:
     app.kubernetes.io/instance: velero
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 rules:
   - apiGroups:
       - "*"
@@ -143,7 +143,7 @@ metadata:
     app.kubernetes.io/instance: velero
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 subjects:
   - kind: ServiceAccount
     namespace: openshift-adp
@@ -165,7 +165,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/version: 1.18.2
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   type: ClusterIP
   ports:
@@ -190,7 +190,7 @@ metadata:
     app.kubernetes.io/version: 1.18.2
     helm.sh/chart: velero-12.2.1
     component: velero
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   replicas: 1
   strategy:
@@ -310,7 +310,7 @@ spec:
       volumes:
         - name: cloud-credentials
           secret:
-            secretName: dfmicro-velero-s3
+            secretName: mt-velero-s3
         - name: plugins
           emptyDir: {}
         - name: scratch
@@ -328,16 +328,16 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/version: 1.18.2
     helm.sh/chart: velero-12.2.1
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   credential:
-    name: dfmicro-velero-s3
+    name: mt-velero-s3
     key: cloud
   provider: aws
   accessMode: ReadWrite
   default: true
   objectStorage:
-    bucket: "dfmicro-odr"
+    bucket: "mt-odr"
     prefix: "velero"
   config:
     region: "us-east-1"

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	rootconfig "dfmicro/internal/config"
+	rootconfig "mt/internal/config"
 )
 
 type nodesConfig = rootconfig.NodesConfig

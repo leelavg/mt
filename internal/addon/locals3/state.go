@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	rootconfig "dfmicro/internal/config"
+	rootconfig "mt/internal/config"
 )
 
 func loadState() ([]string, error) {

@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 //go:embed assets/argocd
 var argocdAssets embed.FS
 
 func (o *ocm) installArgoCD(ctx context.Context, kubeconfig string) error {
-	tmpDir, err := os.MkdirTemp("", "dfmicro-argocd-")
+	tmpDir, err := os.MkdirTemp("", "mt-argocd-")
 	if err != nil {
 		return fmt.Errorf("create temporary Argo CD directory: %w", err)
 	}

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"dfmicro/internal/execx"
+	"mt/internal/execx"
 )
 
 type NodeSpec struct {
@@ -94,7 +94,7 @@ func (n *NodeMgr) Create(ctx context.Context, spec NodeSpec) error {
 
 	args = append(args,
 		"--label", "part-of="+spec.ClusterName,
-		"--label", "created-by=dfmicro",
+		"--label", "created-by=mt",
 		"--name", spec.Name,
 		"--hostname", spec.Name,
 		spec.Image,

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 const odfModulesConf = "rbd\nceph\nnbd\n"
-const odfModulesPath = "/etc/modules-load.d/dfmicro-odf.conf"
+const odfModulesPath = "/etc/modules-load.d/mt-odf.conf"
 
 func loadModules(ctx context.Context, logger *slog.Logger, runner execx.Runner) error {
 	logger.Info("configuring ODF kernel modules for auto-load at boot", "path", odfModulesPath)

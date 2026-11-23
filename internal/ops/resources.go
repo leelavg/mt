@@ -12,9 +12,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -51,9 +51,9 @@ func resourcesCommand(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Experimental: output format and flags may change. Use --namespace to scope and improve performance.
 
 Examples:
-  dfmicro ops resources
-  dfmicro ops resources --namespace openshift-operator-lifecycle-manager
-  dfmicro ops resources --name dev --node microshift-node-1`,
+  mt ops resources
+  mt ops resources --namespace openshift-operator-lifecycle-manager
+  mt ops resources --name dev --node microshift-node-1`,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "name",

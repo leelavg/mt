@@ -6,7 +6,7 @@ metadata:
   name: {{.Package}}
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
     catalog: odf-catsrc
     catalog-namespace: openshift-marketplace
 status:
@@ -27,7 +27,7 @@ metadata:
   name: odf-catsrc
   namespace: openshift-marketplace
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   displayName: OpenShift Data Foundation
   image: {{.CatalogImage}}
@@ -38,7 +38,7 @@ const namespaceTmpl = `apiVersion: v1
 kind: Namespace
 metadata:
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
     openshift.io/cluster-monitoring: "true"
   name: openshift-storage
 `
@@ -49,7 +49,7 @@ metadata:
   name: odf
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   targetNamespaces:
     - openshift-storage
@@ -61,7 +61,7 @@ metadata:
   name: ocs-operator-config
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 data:
   ROOK_CURRENT_NAMESPACE_ONLY: "true"
 `
@@ -72,7 +72,7 @@ metadata:
   name: {{.SubName}}
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   channel: {{.Channel}}
   name: {{.SubName}}
@@ -86,7 +86,7 @@ metadata:
   name: ocs-storagecluster
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   enableCephTools: true
   hostNetwork: {{.HostNetwork}}
@@ -195,7 +195,7 @@ kind: SecurityContextConstraints
 metadata:
   name: rook-ceph
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 allowPrivilegedContainer: true
 allowHostDirVolumePlugin: true
 allowHostIPC: true
@@ -237,7 +237,7 @@ metadata:
   name: {{.CephCluster}}
   namespace: ` + providerNamespace + `
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   dataDirHostPath: /var/lib/rook
   cephVersion:
@@ -294,7 +294,7 @@ metadata:
   name: rook-ceph-tools
   namespace: ` + providerNamespace + `
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   replicas: 1
   selector:
@@ -371,7 +371,7 @@ metadata:
   name: {{.BlockPool}}
   namespace: ` + providerNamespace + `
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   failureDomain: host
   replicated:
@@ -385,7 +385,7 @@ metadata:
   name: {{.Filesystem}}
   namespace: ` + providerNamespace + `
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   metadataPool:
     failureDomain: host
@@ -411,7 +411,7 @@ metadata:
   name: ocs-storagecluster
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   externalStorage:
     enable: true
@@ -427,7 +427,7 @@ metadata:
   name: rook-ceph-external-cluster-details
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 type: Opaque
 stringData:
   external_cluster_details: |-
@@ -440,7 +440,7 @@ metadata:
   name: {{.ClientCluster}}
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   storageClasses:
     - name: ocs-storagecluster-ceph-rbd
@@ -474,7 +474,7 @@ metadata:
   name: {{.ProviderCluster}}
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   annotations:
     cert.ocs.openshift.io/expiry-date: {{.Expiry}}
     cert.ocs.openshift.io/identity: {{.ClientSAN}}
@@ -490,7 +490,7 @@ metadata:
   name: {{.ClientCluster}}
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 data:
   ca.crt: {{.Certificate}}
 `
@@ -501,7 +501,7 @@ metadata:
   name: {{.ProviderCluster}}
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 data:
   service-ca.crt: {{.Certificate}}
 `
@@ -509,10 +509,10 @@ data:
 const odfClientNetworkPolicyTmpl = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: dfmicro-allow-{{.ClientCluster}}-ingress
+  name: mt-allow-{{.ClientCluster}}-ingress
   namespace: openshift-storage
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   podSelector:
     matchLabels:
@@ -542,7 +542,7 @@ kind: StorageClient
 metadata:
   name: {{.ProviderCluster}}
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   onboardingTicket: {{.Ticket}}
   storageProviderEndpoint: {{.Endpoint}}

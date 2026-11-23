@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/support"
 )
 
 func (m *manager) uninstall(ctx context.Context, cleanup bool) error {
@@ -49,7 +49,7 @@ func (m *manager) uninstall(ctx context.Context, cleanup bool) error {
 		if err != nil {
 			return err
 		}
-		if strings.TrimSpace(label.Stdout) != "dfmicro" {
+		if strings.TrimSpace(label.Stdout) != "mt" {
 			return fmt.Errorf("container %q is not owned by local-s3", containerName)
 		}
 		if _, err := support.RunPodmanPrivileged(ctx, m.runner, "rm", "--force", containerName); err != nil {

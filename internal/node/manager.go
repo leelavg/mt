@@ -13,10 +13,10 @@ import (
 	"strings"
 	"text/template"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/network"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/network"
+	"mt/internal/support"
 )
 
 type manager struct {
@@ -141,7 +141,7 @@ func (m *manager) reconcileWorker(ctx context.Context, w worker) error {
 	if _, err := support.RunPodmanPrivileged(ctx, m.runner, "exec", w.controlNodeName, "oc", "wait", "--for=create", "--timeout=120s", "node/"+w.name); err != nil {
 		return fmt.Errorf("wait for worker node before labeling: %w", err)
 	}
-	if _, err := support.RunPodmanPrivileged(ctx, m.runner, "exec", w.controlNodeName, "oc", "label", "node", w.name, "dfmicro.io/whereabouts=enabled", "--overwrite"); err != nil {
+	if _, err := support.RunPodmanPrivileged(ctx, m.runner, "exec", w.controlNodeName, "oc", "label", "node", w.name, "mt.test/whereabouts=enabled", "--overwrite"); err != nil {
 		return fmt.Errorf("label worker node for whereabouts: %w", err)
 	}
 	return nil
@@ -233,12 +233,12 @@ func (m *manager) extractKubeletCA(ctx context.Context, cfg rootconfig.ClusterCo
 	result, err := support.RunPodmanPrivileged(ctx, m.runner, "exec", "-i", controlNodeName, "sh", "-c", `
 set -e
 for file in ca.crt ca.key serial.txt; do
-    printf '\nDFMICRO_FILE:%s\n' "$file"
+    printf '\nMT_FILE:%s\n' "$file"
     cat "/var/lib/microshift/certs/kubelet-csr-signer-signer/csr-signer/$file"
 done
-printf '\nDFMICRO_FILE:kubelet-ca.crt\n'
+printf '\nMT_FILE:kubelet-ca.crt\n'
 cat /var/lib/microshift/certs/ca-bundle/kubelet-ca.crt
-printf '\nDFMICRO_FILE:client-ca.crt\n'
+printf '\nMT_FILE:client-ca.crt\n'
 cat /var/lib/microshift/certs/kube-apiserver-to-kubelet-client-signer/ca.crt
 `)
 	if err != nil {
@@ -246,7 +246,7 @@ cat /var/lib/microshift/certs/kube-apiserver-to-kubelet-client-signer/ca.crt
 	}
 
 	files := make(map[string]string, 5)
-	for _, section := range strings.Split(result.Stdout, "DFMICRO_FILE:")[1:] {
+	for _, section := range strings.Split(result.Stdout, "MT_FILE:")[1:] {
 		before, after, ok := strings.Cut(section, "\n")
 		if !ok {
 			return fmt.Errorf("parse kubelet certificate output")

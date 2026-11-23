@@ -1,12 +1,12 @@
 # Agent Guidelines
 
-dfmicro runs MicroShift clusters in rootful Podman containers. Clusters can have a control node and workers. CLI built on urfave/cli v3.
+mt runs MicroShift clusters in rootful Podman containers. Clusters can have a control node and workers. CLI built on urfave/cli v3.
 
 ## Packages
 
 Every command registered in internal/app/app.go comes from L1 of internal/ and only internal/addon/ has L2 containing code.
 
-There'll only ever be a single subcommand, ex: `dfmicro cmd subcmd --flags` except for the `addon` command, dir under addon is a separate island for managing different addons on top of base cluster.
+There'll only ever be a single subcommand, ex: `mt cmd subcmd --flags` except for the `addon` command, dir under addon is a separate island for managing different addons on top of base cluster.
 
 ```
 > tree internal/ -L1
@@ -50,7 +50,7 @@ Cluster settings are stored in the cluster directory. Control-node settings are 
 
 ## Etiquette
 
-- Never bring external dependencies and prefer using stdlib as bloating the binary is unacceptable, you can occasionally check the binary compiled by `make build-analyze` with `gsa`. Anecdote: ./internal/support/http.go is build gated because dfmicro binary doesn't use http.
+- Never bring external dependencies and prefer using stdlib as bloating the binary is unacceptable, you can occasionally check the binary compiled by `make build-analyze` with `gsa`. Anecdote: ./internal/support/http.go is build gated because mt binary doesn't use http.
 - All packages only export `Command` function and everything else is private, the types, funcs, methods etc. Fields are only exported if they are Marshaled/Unmarshaled.
 
 ## References

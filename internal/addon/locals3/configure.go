@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/support"
 )
 
 func (m *manager) configure(ctx context.Context, attachTo, detachFrom []string) error {

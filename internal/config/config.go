@@ -14,7 +14,7 @@ func NodeName(cluster string, index int) string {
 }
 
 func BaseDomain(clusterName string) string {
-	return clusterName + ".dfmicro.io"
+	return clusterName + ".mt.test"
 }
 
 //go:embed defaults.json
@@ -100,5 +100,5 @@ func ConfigDir() string {
 			panic(err)
 		}
 	}
-	return filepath.Join(configDir, "dfmicro")
+	return filepath.Join(configDir, "mt")
 }

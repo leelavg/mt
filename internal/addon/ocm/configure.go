@@ -10,9 +10,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 //go:embed assets/application-manager.yaml
@@ -48,7 +48,7 @@ var supportedOCMAddonNames = []string{
 
 func (o *ocm) listAddons() error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "DFMICRO ADDON\tHUB SETUP\tSPOKE SETUP")
+	fmt.Fprintln(w, "MT ADDON\tHUB SETUP\tSPOKE SETUP")
 	for _, name := range supportedOCMAddonNames {
 		addon := supportedOCMAddons[name]
 		hubSetup := ""
@@ -149,7 +149,7 @@ func (o *ocm) configure(ctx context.Context, hubName string, spokeNames, addonNa
 	var tempDir string
 	var hubPrivateKubeconfig, contextName string
 	if len(hubAddons) > 0 || len(spokeNames) > 0 {
-		tempDir, err = os.MkdirTemp("", "dfmicro-ocm-")
+		tempDir, err = os.MkdirTemp("", "mt-ocm-")
 		if err != nil {
 			return fmt.Errorf("create temporary OCM config directory: %w", err)
 		}

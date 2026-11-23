@@ -8,7 +8,7 @@ metadata:
     include.release.openshift.io/single-node-developer: "true"
   name: clusteroperators.config.openshift.io
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   group: config.openshift.io
   names:

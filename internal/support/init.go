@@ -14,7 +14,7 @@ var KubeClient string
 func init() {
 	exe, err := os.Executable()
 	if err != nil {
-		BinaryName = "dfmicro"
+		BinaryName = "mt"
 	} else {
 		BinaryName = filepath.Base(exe)
 	}

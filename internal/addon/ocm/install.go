@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dfmicro/internal/addon/ocp"
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/addon/ocp"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 //go:embed assets/ocm-controller.yaml
@@ -47,7 +47,7 @@ func (o *ocm) install(ctx context.Context, clusterName, version string) error {
 	if strings.TrimSpace(result.Stdout) != "" {
 		o.logger.Info("OCM cluster-manager already exists", "cluster", clusterName)
 	} else {
-		tempDir, err := os.MkdirTemp("", "dfmicro-ocm-")
+		tempDir, err := os.MkdirTemp("", "mt-ocm-")
 		if err != nil {
 			return fmt.Errorf("create temporary OCM config directory: %w", err)
 		}

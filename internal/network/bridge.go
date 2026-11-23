@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 type bridgeConfig struct {
@@ -49,7 +49,7 @@ func (m *bridgeManager) create(ctx context.Context, cfg bridgeConfig) error {
 
 	m.logger.Info("creating bridge", "name", cfg.name, "subnet", cfg.subnet)
 	args := []string{"network", "create",
-		"--label", "created-by=dfmicro",
+		"--label", "created-by=mt",
 		"--subnet", cfg.subnet,
 		"--ip-range", reservedEnd,
 	}
@@ -84,10 +84,10 @@ func (m *bridgeManager) exists(ctx context.Context, name string) bool {
 
 func (m *bridgeManager) list(ctx context.Context) error {
 	result, err := support.RunPodmanPrivileged(ctx, m.runner,
-		"network", "ls", "--filter", "label=created-by=dfmicro", "--format", "{{.Name}}",
+		"network", "ls", "--filter", "label=created-by=mt", "--format", "{{.Name}}",
 	)
 	if err != nil {
-		return fmt.Errorf("failed to list dfmicro networks: %w", err)
+		return fmt.Errorf("failed to list mt networks: %w", err)
 	}
 
 	for name := range strings.FieldsSeq(result.Stdout) {

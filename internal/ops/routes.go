@@ -11,13 +11,13 @@ import (
 	"slices"
 	"strings"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
-const routeDNSStart = "# dfmicro routes begin"
-const routeDNSEnd = "# dfmicro routes end"
+const routeDNSStart = "# mt routes begin"
+const routeDNSEnd = "# mt routes end"
 
 type routeDNS struct {
 	logger *slog.Logger
@@ -75,7 +75,7 @@ func runningClusterConfigs(ctx context.Context, runner execx.Runner) ([]rootconf
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read dfmicro config directory: %w", err)
+		return nil, fmt.Errorf("read mt config directory: %w", err)
 	}
 
 	var configs []rootconfig.ClusterConfig
@@ -167,7 +167,7 @@ func reconcileManagedCorefile(corefile, startMarker, endMarker string, blocks []
 	start := strings.Index(corefile, startMarker)
 	end := strings.Index(corefile, endMarker)
 	if (start == -1) != (end == -1) || (start != -1 && end < start) {
-		return "", false, fmt.Errorf("malformed dfmicro DNS block in Corefile")
+		return "", false, fmt.Errorf("malformed mt DNS block in Corefile")
 	}
 
 	if start == -1 && len(blocks) == 0 {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"dfmicro/internal/support"
+	"mt/internal/support"
 )
 
 var uninstallCmds = []string{

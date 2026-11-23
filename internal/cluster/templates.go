@@ -6,7 +6,7 @@ metadata:
   name: kindnet-config
   namespace: kube-kindnet
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 data:
   podSubnet: {{ .ClusterCIDR }}
 `

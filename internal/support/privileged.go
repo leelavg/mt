@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"dfmicro/internal/execx"
+	"mt/internal/execx"
 )
 
 var RunPrivileged func(context.Context, execx.Runner, string, ...string) (execx.Result, error)
@@ -39,7 +39,7 @@ func init() {
 		RunUnprivileged = execx.Run
 		RunPrivileged = execx.RunSudo
 		WritePrivileged = func(ctx context.Context, runner execx.Runner, path, content string, mode os.FileMode) error {
-			f, err := os.CreateTemp("", "dfmicro-*")
+			f, err := os.CreateTemp("", "mt-*")
 			if err != nil {
 				return err
 			}

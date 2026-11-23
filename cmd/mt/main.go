@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"dfmicro/internal/app"
-	"dfmicro/internal/support"
+	"mt/internal/app"
+	"mt/internal/support"
 )
 
 func main() {

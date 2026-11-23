@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 const (
-	volsyncDNSStart       = "# dfmicro volsync begin"
-	volsyncDNSEnd         = "# dfmicro volsync end"
+	volsyncDNSStart       = "# mt volsync begin"
+	volsyncDNSEnd         = "# mt volsync end"
 	volsyncServicePrefix  = "volsync-rsync-tls-dst-"
 	serviceExportsCRDName = "serviceexports.multicluster.x-k8s.io"
 	clusterSetDNSPoll     = 5 * time.Second

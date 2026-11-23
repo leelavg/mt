@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dfmicro/internal/app"
-	"dfmicro/internal/execx"
+	"mt/internal/app"
+	"mt/internal/execx"
 
 	docs "github.com/urfave/cli-docs/v3"
 )
@@ -25,7 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	md = strings.ReplaceAll(md, filepath.Base(os.Args[0]), "dfmicro")
+	md = strings.ReplaceAll(md, filepath.Base(os.Args[0]), "mt")
 	md = strings.ReplaceAll(md, "\n    \n", "\n\n")
 	if err := os.WriteFile(out, []byte(md), 0o644); err != nil {
 		slog.Error("failed to write docs", "error", err)

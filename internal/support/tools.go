@@ -14,8 +14,8 @@ import (
 	"runtime"
 	"time"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
 )
 
 const clusteradmVersion = "v1.4.0"
@@ -129,20 +129,20 @@ func safeExecutable(info os.FileInfo) bool {
 
 func ensureToolsDir(dir string) error {
 	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
-		return fmt.Errorf("create dfmicro config directory: %w", err)
+		return fmt.Errorf("create mt config directory: %w", err)
 	}
 	if err := os.Mkdir(dir, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
-		return fmt.Errorf("create dfmicro tools directory: %w", err)
+		return fmt.Errorf("create mt tools directory: %w", err)
 	}
 	info, err := os.Lstat(dir)
 	if err != nil {
-		return fmt.Errorf("inspect dfmicro tools directory: %w", err)
+		return fmt.Errorf("inspect mt tools directory: %w", err)
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("dfmicro tools path %q is not a directory", dir)
+		return fmt.Errorf("mt tools path %q is not a directory", dir)
 	}
 	if info.Mode().Perm()&0o022 != 0 {
-		return fmt.Errorf("dfmicro tools directory %q is writable by other users", dir)
+		return fmt.Errorf("mt tools directory %q is writable by other users", dir)
 	}
 	return nil
 }

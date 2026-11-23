@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/support"
 )
 
 func (o *odr) applyTemplateAccess(ctx context.Context, clusterName string) error {

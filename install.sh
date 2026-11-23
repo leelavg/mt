@@ -2,12 +2,12 @@
 
 set -eu
 
-repo="leelavg/dfmicro"
+repo="leelavg/mt"
 install_dir="${INSTALL_DIR:-$HOME/.local/bin}"
 version="${VERSION:-latest}"
 
 log() {
-    echo "dfmicro: $*" >&2
+    echo "mt: $*" >&2
 }
 
 usage() {
@@ -124,7 +124,7 @@ find_archive_name() {
     printf '%s\n' "$release" |
         jq -r --arg os "$os" --arg arch "$arch" '
             .assets[]
-            | select(.name | test("^dfmicro_.*_" + $os + "_" + $arch + "\\.tar\\.gz$"))
+            | select(.name | test("^mt_.*_" + $os + "_" + $arch + "\\.tar\\.gz$"))
             | .name
         ' |
         head -n 1
@@ -134,7 +134,7 @@ find_checksum_name() {
     printf '%s\n' "$release" |
         jq -r '
             .assets[]
-            | select(.name | test("^dfmicro_.*_checksums\\.txt$"))
+            | select(.name | test("^mt_.*_checksums\\.txt$"))
             | .name
         ' |
         head -n 1
@@ -159,8 +159,8 @@ verify_checksum() {
 
 install_binary() {
     mkdir -p "$install_dir"
-    install -m 0755 "$work_dir/dfmicro" "$install_dir/dfmicro"
-    echo "installed dfmicro to $install_dir/dfmicro"
+    install -m 0755 "$work_dir/mt" "$install_dir/mt"
+    echo "installed mt to $install_dir/mt"
 }
 
 main() {
@@ -199,15 +199,15 @@ main() {
     work_dir=$(mktemp -d)
     trap 'rm -rf "$work_dir"' 0
     log "downloading $archive_name"
-    curl -fsSL "$archive_url" -o "$work_dir/dfmicro.tar.gz"
+    curl -fsSL "$archive_url" -o "$work_dir/mt.tar.gz"
     log "downloading $checksum_name"
     curl -fsSL "$checksum_url" -o "$work_dir/checksums.txt"
     log "verifying archive checksum"
-    verify_checksum "$archive_name" "$work_dir/dfmicro.tar.gz" "$work_dir/checksums.txt"
+    verify_checksum "$archive_name" "$work_dir/mt.tar.gz" "$work_dir/checksums.txt"
 
     log "extracting archive"
-    tar -xzf "$work_dir/dfmicro.tar.gz" -C "$work_dir"
-    [ -f "$work_dir/dfmicro" ] || die "release archive does not contain dfmicro"
+    tar -xzf "$work_dir/mt.tar.gz" -C "$work_dir"
+    [ -f "$work_dir/mt" ] || die "release archive does not contain mt"
     log "installing to $install_dir"
     install_binary
 }

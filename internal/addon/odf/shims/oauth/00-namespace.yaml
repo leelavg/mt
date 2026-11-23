@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: openshift-config-managed
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt

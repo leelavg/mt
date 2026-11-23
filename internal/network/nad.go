@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 type nadConfig struct {

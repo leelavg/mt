@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: clusterversions.config.openshift.io
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   group: config.openshift.io
   names:

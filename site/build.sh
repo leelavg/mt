@@ -40,7 +40,7 @@ sed -e "s|__SITE_URL__|$site_url|" \
 cp "$repo/site/site.css" "$book/site.css"
 cp "$repo/site/version.js" "$book/version.js"
 cp "$repo/site/head.hbs" "$theme/head.hbs"
-cp "$repo/internal/docs/assets/dfmicro.svg" "$theme/favicon.svg"
+cp "$repo/internal/docs/assets/mt.svg" "$theme/favicon.svg"
 cp "$repo/internal/docs/assets/favicon-32x32.png" "$theme/favicon.png"
 cp "$repo/internal/docs/assets/favicon-16x16.png" "$src/favicon-16x16.png"
 cp "$repo/internal/docs/assets/apple-touch-icon.png" "$src/apple-touch-icon.png"
@@ -82,7 +82,7 @@ while IFS= read -r path; do
 done < "$repo/site/assets.txt"
 
 {
-    printf '<nav id="dfmicro-version" aria-label="Documentation version">\n'
+    printf '<nav id="mt-version" aria-label="Documentation version">\n'
     printf '<details><summary>%s</summary><ul>\n' "$current_label"
     while IFS='|' read -r key label href; do
         [[ -n "$key" && -n "$label" && -n "$href" ]] || continue

@@ -53,7 +53,7 @@ kind: Namespace
 metadata:
   name: volsync-system
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 EOF
 helm template volsync "${chart_dir}" \
 	--namespace volsync-system \

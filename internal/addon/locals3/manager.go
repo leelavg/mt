@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"dfmicro/internal/execx"
+	"mt/internal/execx"
 )
 
 const (
-	containerName = "dfmicro-local-s3"
-	volumeName    = "dfmicro-local-s3-data"
+	containerName = "mt-local-s3"
+	volumeName    = "mt-local-s3-data"
 )
 
 //go:embed defaults.json

@@ -6,7 +6,7 @@ metadata:
   name: odf-catsrc
   namespace: openshift-marketplace
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   displayName: OpenShift Data Foundation
   image: {{.CatalogImage}}
@@ -19,7 +19,7 @@ metadata:
   name: odf-multicluster-orchestrator
   namespace: openshift-operators
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   channel: {{.Channel}}
   name: odf-multicluster-orchestrator
@@ -33,7 +33,7 @@ metadata:
   name: openshift-trusted-cabundle
   namespace: {{.Namespace}}
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 data:
   ca-bundle.crt: {{.CABundle}}
 `
@@ -41,10 +41,10 @@ data:
 const localS3SecretTmpl = `apiVersion: v1
 kind: Secret
 metadata:
-  name: dfmicro-odr-s3
+  name: mt-odr-s3
   namespace: openshift-operators
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
     multicluster.odf.openshift.io/created-by: s3config
 type: Opaque
 stringData:
@@ -58,13 +58,13 @@ stringData:
 const s3ConfigurationTmpl = `apiVersion: multicluster.odf.openshift.io/v1alpha1
 kind: S3Configuration
 metadata:
-  name: dfmicro-odr
+  name: mt-odr
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   externalS3:
     secretRef:
-      name: dfmicro-odr-s3
+      name: mt-odr-s3
       namespace: openshift-operators
   managedClusters: [{{.ManagedClusters}}]
 `
@@ -72,9 +72,9 @@ spec:
 const mirrorPeerTmpl = `apiVersion: multicluster.odf.openshift.io/v1alpha1
 kind: MirrorPeer
 metadata:
-  name: dfmicro-odr
+  name: mt-odr
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   storageVendor: odf
   type: {{.Type}}

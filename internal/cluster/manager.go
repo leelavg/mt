@@ -16,9 +16,9 @@ import (
 	"text/template"
 	"time"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 func checkRootfulMacOS(ctx context.Context, runner execx.Runner) error {
@@ -561,7 +561,7 @@ func (m *manager) exec(ctx context.Context, containerName string) error {
 }
 
 func listAll(ctx context.Context, logger *slog.Logger, runner execx.Runner) error {
-	result, err := support.RunPodmanPrivileged(ctx, runner, "ps", "-a", "--filter", "label=created-by=dfmicro", "--format=json")
+	result, err := support.RunPodmanPrivileged(ctx, runner, "ps", "-a", "--filter", "label=created-by=mt", "--format=json")
 	if err != nil {
 		return err
 	}

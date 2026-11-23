@@ -6,4 +6,4 @@ metadata:
   annotations:
     service.beta.openshift.io/inject-cabundle: "true"
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt

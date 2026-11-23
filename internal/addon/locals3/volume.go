@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"dfmicro/internal/support"
+	"mt/internal/support"
 )
 
 func (m *manager) ensureVolume(ctx context.Context) error {
@@ -19,7 +19,7 @@ func (m *manager) ensureVolume(ctx context.Context) error {
 		return m.verifyVolume(ctx)
 	}
 	if _, err := support.RunPodmanPrivileged(ctx, m.runner,
-		"volume", "create", "--label", "created-by=dfmicro", volumeName); err != nil {
+		"volume", "create", "--label", "created-by=mt", volumeName); err != nil {
 		return fmt.Errorf("create local-s3 data volume: %w", err)
 	}
 	return nil
@@ -31,7 +31,7 @@ func (m *manager) verifyVolume(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("inspect local-s3 data volume: %w", err)
 	}
-	if strings.TrimSpace(result.Stdout) != "dfmicro" {
+	if strings.TrimSpace(result.Stdout) != "mt" {
 		return fmt.Errorf("Podman volume %q is not owned by local-s3", volumeName)
 	}
 	return nil

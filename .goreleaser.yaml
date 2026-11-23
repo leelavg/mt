@@ -1,15 +1,16 @@
 version: 2
+project_name: mt
 
 before:
   hooks:
     - go generate ./internal/docs
 
 builds:
-  - main: ./cmd/dfmicro
+  - main: ./cmd/mt
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X dfmicro/internal/buildinfo.Version={{.Version}} -X dfmicro/internal/buildinfo.Commit={{.ShortCommit}} -X dfmicro/internal/buildinfo.BuildTime={{.Date}}
+      - -s -w -X mt/internal/buildinfo.Version={{.Version}} -X mt/internal/buildinfo.Commit={{.ShortCommit}} -X mt/internal/buildinfo.BuildTime={{.Date}}
     goos:
       - linux
       - darwin

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	"mt/internal/execx"
+	"mt/internal/support"
 )
 
 func waitForSub(ctx context.Context, runner execx.Runner, kubeClient, kubeconfig, output string, ready func(string) bool) (string, error) {

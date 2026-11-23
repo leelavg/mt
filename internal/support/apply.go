@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"dfmicro/internal/execx"
+	"mt/internal/execx"
 )
 
 func ApplyDir(ctx context.Context, runner execx.Runner, kubeClient, kubeconfig string, fsys embed.FS, dir string) error {
@@ -35,7 +35,7 @@ func ApplyDirIfMissing(ctx context.Context, runner execx.Runner, kubeClient, kub
 		if err != nil {
 			return err
 		}
-		f, err := os.CreateTemp("", "dfmicro-*.yaml")
+		f, err := os.CreateTemp("", "mt-*.yaml")
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ func ApplyDirIfMissing(ctx context.Context, runner execx.Runner, kubeClient, kub
 }
 
 func ApplyYAML(ctx context.Context, runner execx.Runner, kubeClient, kubeconfig, yaml string) error {
-	f, err := os.CreateTemp("", "dfmicro-*.yaml")
+	f, err := os.CreateTemp("", "mt-*.yaml")
 	if err != nil {
 		return err
 	}

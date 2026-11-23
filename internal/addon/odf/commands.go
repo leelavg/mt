@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -40,10 +40,10 @@ Note: --cluster applies to all subcommands and must come before the subcommand n
 			{
 				Name:  "install",
 				Usage: "Install ODF and required shim resources",
-				UsageText: `Requires rbd, ceph, nbd kernel modules loaded on the host. Run 'dfmicro addon odf modules load' first.
+				UsageText: `Requires rbd, ceph, nbd kernel modules loaded on the host. Run 'mt addon odf modules load' first.
 
 Example:
-  dfmicro addon odf install --catalog-image quay.io/example/odf-operator-catalog:v5.0 --channel stable-5.0 --version 5.0.0`,
+  mt addon odf install --catalog-image quay.io/example/odf-operator-catalog:v5.0 --channel stable-5.0 --version 5.0.0`,
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "shims",
@@ -198,8 +198,8 @@ Example:
 				UsageText: `Prints the cleanup commands by default. Pass --attempt to execute them (best-effort).
 
 Examples:
-  dfmicro addon odf uninstall            # dry-run: print commands
-  dfmicro addon odf uninstall --attempt  # execute cleanup`,
+  mt addon odf uninstall            # dry-run: print commands
+  mt addon odf uninstall --attempt  # execute cleanup`,
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "attempt",

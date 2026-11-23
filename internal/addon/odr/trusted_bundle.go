@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/support"
 )
 
 func (o *odr) applyTrustedCABundle(ctx context.Context, clusterName, namespace, operator, deployment string) error {

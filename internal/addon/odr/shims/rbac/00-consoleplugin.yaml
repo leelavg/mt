@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: odr-consoleplugin-manager
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 rules:
 - apiGroups:
   - console.openshift.io
@@ -24,7 +24,7 @@ kind: ClusterRoleBinding
 metadata:
   name: odr-consoleplugin-manager
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

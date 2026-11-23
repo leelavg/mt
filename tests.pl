@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 # Run with a built binary on a clean Linux host with rootful Podman.
-# Examples: DFMICRO_BIN=$HOME/.local/bin/dfmicro perl tests.pl --upto 3
-#           DFMICRO_BIN=$HOME/.local/bin/dfmicro perl tests.pl --level 6
-#           DFMICRO_BIN=$HOME/.local/bin/dfmicro perl tests.pl --upto 2 --etcd
+# Examples: MT_BIN=$HOME/.local/bin/mt perl tests.pl --upto 3
+#           MT_BIN=$HOME/.local/bin/mt perl tests.pl --level 6
+#           MT_BIN=$HOME/.local/bin/mt perl tests.pl --upto 2 --etcd
 
 use strict;
 use warnings;
@@ -78,15 +78,15 @@ sub parse_options {
 	$backend_option = $etcd ? '--etcd' : '';
 }
 
-my $dfmicro = $ENV{DFMICRO_BIN} || 'dfmicro';
+my $mt = $ENV{MT_BIN} || 'mt';
 my $micro = 'micro';
 my $first = 'first';
 my $network = 'backbone';
 my $api_port = 16443;
 my $config_home = $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config";
-my $config_dir = "$config_home/dfmicro";
-my $test_conf = $ENV{DFMICRO_TEST_CONF} || 'tests.conf';
-my $work_dir = '/tmp/dfmicro-test';
+my $config_dir = "$config_home/mt";
+my $test_conf = $ENV{MT_TEST_CONF} || 'tests.conf';
+my $work_dir = '/tmp/mt-test';
 my ($tests, $failed) = (0, 0);
 my $started = 0;
 my $local_s3_installed = 0;
@@ -263,7 +263,7 @@ sub run_process {
         list_command($program, @$args) if $list_mode eq 'cmds';
         return (1, '');
     }
-    local $ENV{DFMICRO_CMD_LOG} = $ENV{DFMICRO_CMD_LOG} || "$work_dir/cmds.log";
+    local $ENV{MT_CMD_LOG} = $ENV{MT_CMD_LOG} || "$work_dir/cmds.log";
     log_command($program, @$args);
     my $command = shell_command($program, @$args);
 
@@ -331,7 +331,7 @@ sub run_program {
 }
 
 sub run_command {
-    return run_program($dfmicro, @_);
+    return run_program($mt, @_);
 }
 
 sub run_ok {
@@ -354,7 +354,7 @@ sub run_fail {
 sub run_with_input {
 	my ($name, $input, $command, $scope) = @_;
 	my @args = command_args($command);
-    my ($passed) = run_process($dfmicro, \@args, input => $input);
+    my ($passed) = run_process($mt, \@args, input => $input);
 	check($passed, $name, $scope);
 }
 
@@ -424,9 +424,9 @@ YAML
 sub run_local_s3_client {
 	my ($cluster, $kubeconfig) = @_;
 	return unless kubectl_ok("create local-S3 client pod", $kubeconfig,
-		"run dfmicro-s3-$cluster --image=docker.io/nicolaka/netshoot:v0.16 --restart=Never --command -- sleep infinity");
+		"run mt-s3-$cluster --image=docker.io/nicolaka/netshoot:v0.16 --restart=Never --command -- sleep infinity");
 	return kubectl_ok("wait for local-S3 client pod", $kubeconfig,
-		"wait --for=condition=Ready pod/dfmicro-s3-$cluster --timeout=60s");
+		"wait --for=condition=Ready pod/mt-s3-$cluster --timeout=60s");
 }
 
 sub read_s3_object {
@@ -434,7 +434,7 @@ sub read_s3_object {
 	return capture('kubectl', '--request-timeout=70s', '--kubeconfig', $kubeconfig,
 		'exec', '-n', 'default', $pod, '--', 'curl', '-fsS', '--retry', '60', '--retry-all-errors',
 		'--retry-delay', '1', '--retry-max-time', '60', '--max-time', '2',
-		"http://$service.default.svc:9000/dfmicro-test/shared");
+		"http://$service.default.svc:9000/mt-test/shared");
 }
 
 sub pod_ip {
@@ -464,7 +464,7 @@ sub node_has_whereabouts_label {
 	my ($kubeconfig, $node) = @_;
 	my ($passed, $value) = capture(
 		'kubectl', '--kubeconfig', $kubeconfig, 'get', 'node', $node,
-		'-o', 'jsonpath={.metadata.labels.dfmicro\\.io/whereabouts}',
+		'-o', 'jsonpath={.metadata.labels.mt\\.io/whereabouts}',
 	);
 	return $passed && $value eq 'enabled';
 }
@@ -522,8 +522,8 @@ sub test_storage {
 	kubectl_with_input("${prefix}create $name StatefulSet", $kubeconfig, storage_manifest($name, $node, $storage_class));
 	kubectl_ok("${prefix}wait for $name PVC", $kubeconfig, "wait --for=create --for=jsonpath={.status.phase}=Bound --timeout=${timeout}s pvc/data-$name-0 -n default");
 	kubectl_ok("${prefix}wait for $name StatefulSet", $kubeconfig, "rollout status statefulset/$name -n default --timeout=${timeout}s");
-	kubectl_ok("${prefix}write to $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'printf dfmicro > /data/check'");
-	kubectl_ok("${prefix}read from $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'test \$(cat /data/check) = dfmicro'");
+	kubectl_ok("${prefix}write to $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'printf mt > /data/check'");
+	kubectl_ok("${prefix}read from $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'test \$(cat /data/check) = mt'");
 	unless ($keep) {
 		kubectl_ok("${prefix}delete $name StatefulSet", $kubeconfig, "delete statefulset $name -n default --wait=true --timeout=60s");
 		kubectl_ok("${prefix}wait for $name PVC deletion", $kubeconfig, "wait --for=delete pvc/data-$name-0 -n default --timeout=60s");
@@ -534,11 +534,11 @@ sub kubeconfig {
 	my ($name) = @_;
 	my $path = "$work_dir/$name-kubeconfig";
 	if ($list_only) {
-		list_command($dfmicro, 'cluster', 'kubeconfig', '--name', $name) if $list_mode eq 'cmds';
+		list_command($mt, 'cluster', 'kubeconfig', '--name', $name) if $list_mode eq 'cmds';
 		check(1, "write $name kubeconfig", $name);
 		return $path;
     }
-    my ($passed, $output) = capture($dfmicro, 'cluster', 'kubeconfig', '--name', $name);
+    my ($passed, $output) = capture($mt, 'cluster', 'kubeconfig', '--name', $name);
 	check($passed && $output ne '', "write $name kubeconfig", $name);
     open my $file, '>', $path or die "write $path: $!";
     print {$file} $output;
@@ -556,7 +556,7 @@ sub config_is_empty {
 
 sub clean_slate {
     return 1 if $list_only;
-    check(config_is_empty(), "dfmicro config directory is empty before testing");
+    check(config_is_empty(), "mt config directory is empty before testing");
 	check(!-f "$work_dir/local-s3-installed",
 		"no local-S3 suite resources remain before testing");
     return $failed == 0;
@@ -573,7 +573,7 @@ sub remove_network {
 
 sub remove_netshoots {
 	return unless defined $micro_kubeconfig && defined $first_kubeconfig;
-	for my $pod (qw(first-default-a micro-gp1-a first-gp1-b micro-gp1-b first-default-b micro-default-b first-default-c micro-default-c plain-first plain-micro plain-micro-new dfmicro-s3-micro dfmicro-s3-first)) {
+	for my $pod (qw(first-default-a micro-gp1-a first-gp1-b micro-gp1-b first-default-b micro-default-b first-default-c micro-default-c plain-first plain-micro plain-micro-new mt-s3-micro mt-s3-first)) {
 		my $kubeconfig = $pod =~ /^first/ ? $first_kubeconfig : $micro_kubeconfig;
 		run_program('kubectl', "--kubeconfig $kubeconfig delete pod $pod --ignore-not-found --grace-period=2 --wait=false");
 	}
@@ -581,8 +581,8 @@ sub remove_netshoots {
 
 sub remove_storage_workloads {
 	my %workloads = (
-		$first => [qw(dfmicro-storage-control dfmicro-storage-worker dfmicro-odf-single dfmicro-odf-provider dfmicro-odf-provider-single dfmicro-test)],
-		$micro => [qw(dfmicro-odf-external dfmicro-odf-client)],
+		$first => [qw(mt-storage-control mt-storage-worker mt-odf-single mt-odf-provider mt-odf-provider-single mt-test)],
+		$micro => [qw(mt-odf-external mt-odf-client)],
 	);
 	my @clusters = @_ ? @_ : ($first, $micro);
 	for my $cluster (@clusters) {
@@ -661,7 +661,7 @@ sub cluster_config_exists {
 sub cleanup_kubeconfig {
 	my ($name) = @_;
 	return unless cluster_config_exists($name);
-	my ($passed, $contents) = capture($dfmicro, 'cluster', 'kubeconfig', '--name', $name);
+	my ($passed, $contents) = capture($mt, 'cluster', 'kubeconfig', '--name', $name);
 	return unless $passed && $contents ne '';
 	my $path = "$work_dir/$name-kubeconfig";
 	open my $file, '>', $path or die "write $path: $!";
@@ -703,7 +703,7 @@ sub run_level_4 {
 	run_ok('configure single-node ODF on first', "addon odf --cluster $first configure");
 	wait_storage_cluster('single-node ODF', $first_kubeconfig);
 	section('single-node ODF persistent volume', $first);
-	test_storage($first_kubeconfig, 'dfmicro-odf-single', "$first-0");
+	test_storage($first_kubeconfig, 'mt-odf-single', "$first-0");
 }
 
 sub run_level_5 {
@@ -722,7 +722,7 @@ sub run_level_5 {
 	run_ok('install ODF on external consumer', "addon odf --cluster $micro install " . odf_install_args('odf-operator'));
 	run_ok('configure external ODF consumer', "addon odf --cluster $micro configure --connect-to $first");
 	wait_storage_cluster('external consumer ODF', $micro_kubeconfig);
-	test_storage($micro_kubeconfig, 'dfmicro-odf-external', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
+	test_storage($micro_kubeconfig, 'mt-odf-external', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
 }
 
 sub run_level_6 {
@@ -740,7 +740,7 @@ sub run_level_6 {
 	run_ok('install ODF provider on first', "addon odf --cluster $first install " . odf_install_args('odf-operator'));
 	run_ok('configure single-node ODF provider', "addon odf --cluster $first configure");
 	wait_storage_cluster('single-node ODF provider', $first_kubeconfig);
-	test_storage($first_kubeconfig, 'dfmicro-odf-provider-single', "$first-0", 'ocs-storagecluster-ceph-rbd', 300);
+	test_storage($first_kubeconfig, 'mt-odf-provider-single', "$first-0", 'ocs-storagecluster-ceph-rbd', 300);
 
 	section('client-only ODF consumer', $micro);
 	run_ok('install ODF client operator on micro', "addon odf --cluster $micro install " . odf_install_args('ocs-client-operator'));
@@ -748,7 +748,7 @@ sub run_level_6 {
 	run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first");
 	kubectl_ok('set client StorageClass', $first_kubeconfig,
 		"patch storageconsumer $micro -n openshift-storage --type=json -p '[{\"op\":\"add\",\"path\":\"/spec/storageClasses\",\"value\":[{\"name\":\"ocs-storagecluster-ceph-rbd\"}]}]'");
-	test_storage($micro_kubeconfig, 'dfmicro-odf-client', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
+	test_storage($micro_kubeconfig, 'mt-odf-client', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
 }
 
 sub run_level_7 {
@@ -759,7 +759,7 @@ sub run_level_7 {
 	run_ok('install ODF provider on first', "addon odf --cluster $first install " . odf_install_args('odf-operator'));
 	run_ok('configure multi-node ODF provider', "addon odf --cluster $first configure --hostnetwork --multi-node");
 	wait_storage_cluster('multi-node ODF provider', $first_kubeconfig);
-	test_storage($first_kubeconfig, 'dfmicro-odf-provider', "$first-0", 'ocs-storagecluster-ceph-rbd', 300);
+	test_storage($first_kubeconfig, 'mt-odf-provider', "$first-0", 'ocs-storagecluster-ceph-rbd', 300);
 
 	section('client-only ODF consumer', $micro);
 	run_ok('install ODF client operator on micro', "addon odf --cluster $micro install " . odf_install_args('ocs-client-operator'));
@@ -767,7 +767,7 @@ sub run_level_7 {
 	run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first");
 	kubectl_ok('set client StorageClass', $first_kubeconfig,
 		"patch storageconsumer $micro -n openshift-storage --type=json -p '[{\"op\":\"add\",\"path\":\"/spec/storageClasses\",\"value\":[{\"name\":\"ocs-storagecluster-ceph-rbd\"}]}]'");
-	test_storage($micro_kubeconfig, 'dfmicro-odf-client', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
+	test_storage($micro_kubeconfig, 'mt-odf-client', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
 }
 
 sub run_level_8 {
@@ -788,18 +788,18 @@ sub run_level_8 {
 
 	section('S3 access across clusters', "$micro,$first");
 	kubectl_ok("create S3 bucket from $micro", $micro_kubeconfig,
-		"--request-timeout=15s exec -n default dfmicro-s3-$micro -- curl -fsS --max-time 10 -X PUT http://s3.default.svc:9000/dfmicro-test");
-	my @write_args = ('--request-timeout=15s', '--kubeconfig', $micro_kubeconfig, 'exec', '-i', '-n', 'default', "dfmicro-s3-$micro", '--', 'curl', '-fsS', '--max-time', '10', '--data-binary', '@-', '-X', 'PUT', "http://s3.default.svc:9000/dfmicro-test/shared");
-	my ($written) = run_process('kubectl', \@write_args, input => 'dfmicro-s3');
+		"--request-timeout=15s exec -n default mt-s3-$micro -- curl -fsS --max-time 10 -X PUT http://s3.default.svc:9000/mt-test");
+	my @write_args = ('--request-timeout=15s', '--kubeconfig', $micro_kubeconfig, 'exec', '-i', '-n', 'default', "mt-s3-$micro", '--', 'curl', '-fsS', '--max-time', '10', '--data-binary', '@-', '-X', 'PUT', "http://s3.default.svc:9000/mt-test/shared");
+	my ($written) = run_process('kubectl', \@write_args, input => 'mt-s3');
 	check($written, "write S3 object from $micro", $micro);
 	kubectl_ok("resolve local S3 Service in $micro", $micro_kubeconfig,
-		"--request-timeout=15s exec -n default dfmicro-s3-$micro -- getent hosts s3.default.svc");
-	my ($local_read, $local_object) = read_s3_object($micro_kubeconfig, "dfmicro-s3-$micro", 's3');
-	check($local_read && $local_object eq 'dfmicro-s3', "read S3 object from $micro", $micro);
+		"--request-timeout=15s exec -n default mt-s3-$micro -- getent hosts s3.default.svc");
+	my ($local_read, $local_object) = read_s3_object($micro_kubeconfig, "mt-s3-$micro", 's3');
+	check($local_read && $local_object eq 'mt-s3', "read S3 object from $micro", $micro);
 	kubectl_ok("resolve shared-network S3 Service in $first", $first_kubeconfig,
-		"--request-timeout=15s exec -n default dfmicro-s3-$first -- getent hosts s3.default.svc");
-	my ($remote_read, $remote_object) = read_s3_object($first_kubeconfig, "dfmicro-s3-$first", 's3');
-	check($remote_read && $remote_object eq 'dfmicro-s3', "read S3 object from $first", $first);
+		"--request-timeout=15s exec -n default mt-s3-$first -- getent hosts s3.default.svc");
+	my ($remote_read, $remote_object) = read_s3_object($first_kubeconfig, "mt-s3-$first", 's3');
+	check($remote_read && $remote_object eq 'mt-s3', "read S3 object from $first", $first);
 
 	return if $keep;
 	section('detach and uninstall local S3', "$micro,$first");
@@ -816,8 +816,8 @@ sub run_level_8 {
 	mark_local_s3_installed(1);
 	return unless run_ok('reinstall local-s3 with preserved data', 'addon local-s3 install');
 	return unless run_ok("republish S3 in $micro", "addon local-s3 configure --attach-to $micro", $micro);
-	my ($preserved, $preserved_object) = read_s3_object($micro_kubeconfig, "dfmicro-s3-$micro", 's3');
-	check($preserved && $preserved_object eq 'dfmicro-s3', "read preserved S3 object from $micro", $micro);
+	my ($preserved, $preserved_object) = read_s3_object($micro_kubeconfig, "mt-s3-$micro", 's3');
+	check($preserved && $preserved_object eq 'mt-s3', "read preserved S3 object from $micro", $micro);
 	if (run_ok('uninstall local-s3 and remove data', 'addon local-s3 uninstall --cleanup')) {
 		mark_local_s3_installed(0);
 	} else {
@@ -827,7 +827,7 @@ sub run_level_8 {
 	return unless run_ok('install local-s3 with a clean data volume', 'addon local-s3 install');
 	return unless run_ok("publish clean S3 in $micro", "addon local-s3 configure --attach-to $micro", $micro);
 	my ($empty, $empty_status) = capture('kubectl', '--request-timeout=70s', '--kubeconfig', $micro_kubeconfig,
-		'exec', '-n', 'default', "dfmicro-s3-$micro", '--', 'curl', '-sS', '--retry', '60', '--retry-all-errors', '--retry-delay', '1', '--retry-max-time', '60', '--max-time', '2', '-o', '/dev/null', '-w', '%{http_code}', 'http://s3.default.svc:9000/dfmicro-test/shared');
+		'exec', '-n', 'default', "mt-s3-$micro", '--', 'curl', '-sS', '--retry', '60', '--retry-all-errors', '--retry-delay', '1', '--retry-max-time', '60', '--max-time', '2', '-o', '/dev/null', '-w', '%{http_code}', 'http://s3.default.svc:9000/mt-test/shared');
 	check($empty && $empty_status eq '404', 'clean S3 volume has no previous object', $micro);
 }
 
@@ -858,7 +858,7 @@ sub finish_level {
 sub run_selected_level {
 	prepare_level($level);
 	if ($level == 8) {
-		section('install local S3 on the dfmicro bridge', $micro);
+		section('install local S3 on the mt bridge', $micro);
 		mark_local_s3_installed(1);
 		unless (run_ok('install local-s3', 'addon local-s3 install --image ghcr.io/shyim/local-s3:0.1.1')) {
 			finish_level(8, [$micro, $first], []);
@@ -998,8 +998,8 @@ run_ok('show storage resources', "ops resources --name $first");
 
 # A workload must provision, mount, write, and read persistent data on every node.
 section('persistent volume read and write', $first);
-test_storage($first_kubeconfig, 'dfmicro-storage-control', 'first-0');
-test_storage($first_kubeconfig, 'dfmicro-storage-worker', 'first-1');
+test_storage($first_kubeconfig, 'mt-storage-control', 'first-0');
+test_storage($first_kubeconfig, 'mt-storage-worker', 'first-1');
 
 section('multi-node cluster restart', $first);
 run_ok('stop multi-node cluster', "cluster stop --name $first");
@@ -1132,7 +1132,7 @@ sub main {
 		run_selected_level();
 	}
 	if ($upto == 8) {
-		section('install local S3 on the dfmicro bridge', $micro);
+		section('install local S3 on the mt bridge', $micro);
 		mark_local_s3_installed(1);
 		unless (run_ok('install local-s3', 'addon local-s3 install')) {
 			finish_level(8, [$micro, $first], []);

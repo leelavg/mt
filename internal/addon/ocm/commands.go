@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -20,10 +20,10 @@ func Command(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		UsageText: `Use --cluster before the subcommand to select the hub.
 
 Example:
-  dfmicro addon ocm --cluster hub install --version 5.0.0
-  dfmicro addon ocm --cluster hub configure --spoke spoke --addon governance-policy-framework,argocd
-  dfmicro addon ocm --cluster hub configure --addon application-manager
-  dfmicro addon ocm --list-addons`,
+  mt addon ocm --cluster hub install --version 5.0.0
+  mt addon ocm --cluster hub configure --spoke spoke --addon governance-policy-framework,argocd
+  mt addon ocm --cluster hub configure --addon application-manager
+  mt addon ocm --list-addons`,
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			if cmd.Bool("list-addons") {
 				return o.listAddons()
@@ -57,7 +57,7 @@ Example:
 With --addon and no --spoke, it installs the addon on the hub only.
 
 Example:
-  dfmicro addon ocm --cluster hub configure --spoke spoke1,spoke2 --addon governance-policy-framework,application-manager,argocd`,
+  mt addon ocm --cluster hub configure --spoke spoke1,spoke2 --addon governance-policy-framework,application-manager,argocd`,
 				Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 					spokes := cmd.StringSlice("spoke")
 					addons := cmd.StringSlice("addon")

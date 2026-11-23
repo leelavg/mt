@@ -3,7 +3,7 @@ kind: ServiceAccount
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: metrics-server
   namespace: kube-system
 ---
@@ -15,7 +15,7 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     rbac.authorization.k8s.io/aggregate-to-view: "true"
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: system:aggregated-metrics-reader
 rules:
   - apiGroups:
@@ -33,7 +33,7 @@ kind: ClusterRole
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: system:metrics-server
 rules:
   - apiGroups:
@@ -57,7 +57,7 @@ kind: RoleBinding
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: metrics-server-auth-reader
   namespace: kube-system
 roleRef:
@@ -74,7 +74,7 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: metrics-server:system:auth-delegator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -90,7 +90,7 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: system:metrics-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -106,7 +106,7 @@ kind: Service
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: metrics-server
   namespace: kube-system
 spec:
@@ -124,7 +124,7 @@ kind: Deployment
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: metrics-server
   namespace: kube-system
 spec:
@@ -138,7 +138,7 @@ spec:
     metadata:
       labels:
         k8s-app: metrics-server
-        app.kubernetes.io/created-by: dfmicro
+        app.kubernetes.io/created-by: mt
     spec:
       containers:
         - args:
@@ -207,7 +207,7 @@ kind: APIService
 metadata:
   labels:
     k8s-app: metrics-server
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
   name: v1beta1.metrics.k8s.io
 spec:
   group: metrics.k8s.io

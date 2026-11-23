@@ -1,6 +1,6 @@
 # Examples
 
-Run `dfmicro` as a normal user. The examples use the configured default MicroShift image.
+Run `mt` as a normal user. The examples use the configured default MicroShift image.
 
 ## Prepare access
 
@@ -8,7 +8,7 @@ Run this once per host.
 
 ```console
 # Linux only. macOS uses a rootful Podman machine instead.
-dfmicro ops sudoers create
+mt ops sudoers create
 ```
 
 Inspect the CLI build and embedded defaults.
@@ -16,10 +16,10 @@ Inspect the CLI build and embedded defaults.
 The examples below were verified with this build and configuration:
 
 ```console
-$ dfmicro -v
-dfmicro version dev (none, 2026-10-24T12:16:49Z)
+$ mt -v
+mt version dev (none, 2026-10-24T12:16:49Z)
 
-$ dfmicro config
+$ mt config
 {
   "name": "micro",
   "image": "ghcr.io/leelavg/microshift:5.0.0_202609201132_g4582bf673_5.0.0_okd_scos.ec.8",
@@ -46,14 +46,14 @@ $ dfmicro config
 ## Create and inspect a cluster
 
 ```console
-dfmicro cluster create \
+mt cluster create \
   --name demo \
   --no-topolvm
 
-dfmicro cluster list
-dfmicro cluster config --name demo
-dfmicro node config --cluster demo
-dfmicro cluster kubeconfig --name demo >/tmp/demo-kubeconfig
+mt cluster list
+mt cluster config --name demo
+mt node config --cluster demo
+mt cluster kubeconfig --name demo >/tmp/demo-kubeconfig
 export KUBECONFIG=/tmp/demo-kubeconfig
 
 kubectl get nodes -o wide
@@ -63,26 +63,26 @@ kubectl get pods -A
 Stop and start the cluster without removing its state.
 
 ```console
-dfmicro cluster stop --name demo
-dfmicro cluster start --name demo
+mt cluster stop --name demo
+mt cluster start --name demo
 ```
 
 ## Use a shared local S3 service
 
 Create a cluster for this example, then start the standalone service on
-dfmicro's default bridge network. It does not publish a host port.
+mt's default bridge network. It does not publish a host port.
 
 ```console
-dfmicro cluster create --name s3-demo --no-topolvm
-dfmicro addon local-s3 install
-dfmicro addon local-s3 configure --attach-to s3-demo
+mt cluster create --name s3-demo --no-topolvm
+mt addon local-s3 install
+mt addon local-s3 configure --attach-to s3-demo
 
-dfmicro cluster kubeconfig --name s3-demo >/tmp/s3-demo-kubeconfig
+mt cluster kubeconfig --name s3-demo >/tmp/s3-demo-kubeconfig
 kubectl --kubeconfig /tmp/s3-demo-kubeconfig get service s3 -n default
 ```
 
 The endpoint inside the cluster is `http://s3.default.svc:9000`. No
-accounts are configured, so requests are anonymous. dfmicro does not create an
+accounts are configured, so requests are anonymous. mt does not create an
 access key or secret. If a client requires a region, use `us-east-1`. For the
 AWS CLI, use `--no-sign-request`:
 
@@ -93,13 +93,13 @@ aws --no-sign-request --endpoint-url http://s3.default.svc:9000 s3 ls
 Uninstalling preserves the data volume. Pass `--cleanup` to delete it.
 
 ```console
-dfmicro addon local-s3 uninstall
+mt addon local-s3 uninstall
 ```
 
 To also delete the data volume:
 
 ```console
-dfmicro addon local-s3 uninstall --cleanup
+mt addon local-s3 uninstall --cleanup
 ```
 
 ## Add and remove a worker
@@ -108,9 +108,9 @@ Create a cluster for this example. Add a worker after the control plane is
 ready. The command checks control-plane readiness before onboarding the worker.
 
 ```console
-dfmicro cluster create --name worker-demo --no-topolvm
-dfmicro node add --cluster worker-demo
-dfmicro cluster kubeconfig --name worker-demo >/tmp/worker-demo-kubeconfig
+mt cluster create --name worker-demo --no-topolvm
+mt node add --cluster worker-demo
+mt cluster kubeconfig --name worker-demo >/tmp/worker-demo-kubeconfig
 export KUBECONFIG=/tmp/worker-demo-kubeconfig
 kubectl get nodes -o wide
 kubectl get pods -A -o wide
@@ -121,33 +121,33 @@ Add explicit mounts to a worker when it needs storage not present in the cluster
 creation mounts.
 
 ```console
-dfmicro node add --cluster worker-demo --mount /host/path:/worker/path:ro
+mt node add --cluster worker-demo --mount /host/path:/worker/path:ro
 ```
 
 Use `--force` when debugging worker onboarding and the pre-add readiness check is not desired.
 
 ```console
-dfmicro node add --cluster worker-demo --force
+mt node add --cluster worker-demo --force
 ```
 
 Remove a worker and add another one to reuse the freed slot.
 
 ```console
-dfmicro node remove --cluster worker-demo --name worker-demo-1
-dfmicro node add --cluster worker-demo
+mt node remove --cluster worker-demo --name worker-demo-1
+mt node add --cluster worker-demo
 kubectl get nodes -o wide
 ```
 
 ## Create an etcd-backed cluster
 
 ```console
-dfmicro cluster create \
+mt cluster create \
   --name etcd-demo \
   --etcd \
   --no-topolvm
 
-dfmicro node add --cluster etcd-demo
-dfmicro cluster kubeconfig --name etcd-demo >/tmp/etcd-demo-kubeconfig
+mt node add --cluster etcd-demo
+mt cluster kubeconfig --name etcd-demo >/tmp/etcd-demo-kubeconfig
 KUBECONFIG=/tmp/etcd-demo-kubeconfig kubectl get nodes
 ```
 
@@ -156,21 +156,21 @@ KUBECONFIG=/tmp/etcd-demo-kubeconfig kubectl get nodes
 Use distinct pod and service CIDRs when testing peer operations.
 
 ```console
-dfmicro cluster create \
+mt cluster create \
   --name net-a \
   --no-topolvm \
   --api-server-port 6443 \
   --cluster-cidr 10.42.0.0/16 \
   --service-cidr 10.43.0.0/16
-dfmicro cluster create \
+mt cluster create \
   --name net-b \
   --no-topolvm \
   --api-server-port 6444 \
   --cluster-cidr 10.52.0.0/16 \
   --service-cidr 10.53.0.0/16
 
-dfmicro network peer --cluster net-a --cluster net-b
-dfmicro network unpeer --cluster net-a --cluster net-b
+mt network peer --cluster net-a --cluster net-b
+mt network unpeer --cluster net-a --cluster net-b
 ```
 
 ## Attach clusters to a shared secondary network
@@ -180,12 +180,12 @@ both clusters to it. The secondary network uses its own subnet and does not
 replace the cluster or service networks.
 
 ```console
-dfmicro cluster create --name attach-a --no-topolvm --api-server-port 6443
-dfmicro cluster create --name attach-b --no-topolvm --api-server-port 6444
-dfmicro network create --name backbone --subnet 172.30.0.0/16
-dfmicro network connect --cluster attach-a --cluster attach-b --to backbone
+mt cluster create --name attach-a --no-topolvm --api-server-port 6443
+mt cluster create --name attach-b --no-topolvm --api-server-port 6444
+mt network create --name backbone --subnet 172.30.0.0/16
+mt network connect --cluster attach-a --cluster attach-b --to backbone
 
-dfmicro network attach \
+mt network attach \
   --cluster attach-a:group1 \
   --cluster attach-b:group1 \
   --to backbone \
@@ -197,8 +197,8 @@ With `--multi-node`, the attachment uses Whereabouts IPAM and enables it on the 
 Deploy a diagnostic pod in each cluster and inspect the assigned secondary addresses.
 
 ```console
-dfmicro cluster kubeconfig --name attach-a >/tmp/attach-a-kubeconfig
-dfmicro cluster kubeconfig --name attach-b >/tmp/attach-b-kubeconfig
+mt cluster kubeconfig --name attach-a >/tmp/attach-a-kubeconfig
+mt cluster kubeconfig --name attach-b >/tmp/attach-b-kubeconfig
 
 kubectl --kubeconfig /tmp/attach-a-kubeconfig apply -f - <<'EOF'
 apiVersion: v1
@@ -243,10 +243,10 @@ Inspect and remove the attachment when finished.
 ```console
 kubectl --kubeconfig /tmp/attach-a-kubeconfig delete pod netshoot-a --grace-period=10
 kubectl --kubeconfig /tmp/attach-b-kubeconfig delete pod netshoot-b --grace-period=10
-dfmicro network config --name backbone
-dfmicro network detach --cluster attach-a:group1 --cluster attach-b:group1 --from backbone
-dfmicro network disconnect --cluster attach-a --cluster attach-b --from backbone
-dfmicro network delete --name backbone
+mt network config --name backbone
+mt network detach --cluster attach-a:group1 --cluster attach-b:group1 --from backbone
+mt network disconnect --cluster attach-a --cluster attach-b --from backbone
+mt network delete --name backbone
 ```
 
 ## Configure ODF storage topologies
@@ -266,17 +266,17 @@ cluster creation command in the scenario you run.
 Create a single-node cluster, then install and configure ODF:
 
 ```console
-dfmicro cluster create --name standalone
-dfmicro addon odf modules load
-dfmicro addon odf --cluster standalone install \
+mt cluster create --name standalone
+mt addon odf modules load
+mt addon odf --cluster standalone install \
   --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
   --channel stable-5.0 --version 5.0.0
-dfmicro addon odf --cluster standalone configure
+mt addon odf --cluster standalone configure
 
-dfmicro cluster kubeconfig --name standalone >/tmp/standalone-kubeconfig
+mt cluster kubeconfig --name standalone >/tmp/standalone-kubeconfig
 kubectl --kubeconfig /tmp/standalone-kubeconfig get storagecluster -n openshift-storage
 kubectl --kubeconfig /tmp/standalone-kubeconfig get storageclass
-dfmicro cluster rm --name standalone
+mt cluster rm --name standalone
 ```
 
 ### Rook Ceph provider with an external ODF consumer
@@ -285,13 +285,13 @@ Create two clusters, then install the Rook operator on `rook-provider` and the
 ODF operator on `rook-consumer`:
 
 ```console
-dfmicro cluster create --name rook-provider --api-server-port 6443
-dfmicro cluster create --name rook-consumer --api-server-port 6444
-dfmicro addon odf modules load
-dfmicro addon odf --cluster rook-provider install \
+mt cluster create --name rook-provider --api-server-port 6443
+mt cluster create --name rook-consumer --api-server-port 6444
+mt addon odf modules load
+mt addon odf --cluster rook-provider install \
   --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
   --channel stable-5.0 --version 5.0.0 --sub-name rook-ceph-operator
-dfmicro addon odf --cluster rook-consumer install \
+mt addon odf --cluster rook-consumer install \
   --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
   --channel stable-5.0 --version 5.0.0 --sub-name odf-operator
 ```
@@ -299,11 +299,11 @@ dfmicro addon odf --cluster rook-consumer install \
 Configure Rook on `rook-provider`, then connect `rook-consumer` to it:
 
 ```console
-dfmicro addon odf --cluster rook-provider configure --external-ceph
-dfmicro addon odf --cluster rook-consumer configure --connect-to rook-provider
+mt addon odf --cluster rook-provider configure --external-ceph
+mt addon odf --cluster rook-consumer configure --connect-to rook-provider
 
-dfmicro cluster kubeconfig --name rook-provider >/tmp/rook-provider-kubeconfig
-dfmicro cluster kubeconfig --name rook-consumer >/tmp/rook-consumer-kubeconfig
+mt cluster kubeconfig --name rook-provider >/tmp/rook-provider-kubeconfig
+mt cluster kubeconfig --name rook-consumer >/tmp/rook-consumer-kubeconfig
 kubectl --kubeconfig /tmp/rook-provider-kubeconfig get cephcluster -n openshift-storage
 kubectl --kubeconfig /tmp/rook-consumer-kubeconfig get storagecluster -n openshift-storage
 ```
@@ -314,15 +314,15 @@ Create two clusters, then install the ODF operator on `odf-provider` and the
 client operator on `odf-consumer`:
 
 ```console
-dfmicro cluster create --name odf-provider --api-server-port 6443 \
+mt cluster create --name odf-provider --api-server-port 6443 \
   --cluster-cidr 10.42.0.0/16 --service-cidr 10.43.0.0/16
-dfmicro cluster create --name odf-consumer --api-server-port 6444 \
+mt cluster create --name odf-consumer --api-server-port 6444 \
   --cluster-cidr 10.52.0.0/16 --service-cidr 10.53.0.0/16
-dfmicro addon odf modules load
-dfmicro addon odf --cluster odf-provider install \
+mt addon odf modules load
+mt addon odf --cluster odf-provider install \
   --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
   --channel stable-5.0 --version 5.0.0 --sub-name odf-operator
-dfmicro addon odf --cluster odf-consumer install \
+mt addon odf --cluster odf-consumer install \
   --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
   --channel stable-5.0 --version 5.0.0 --sub-name ocs-client-operator
 ```
@@ -331,26 +331,26 @@ Choose one provider network mode. For a single-node provider without host
 networking, peer the clusters before onboarding the client:
 
 ```console
-dfmicro addon odf --cluster odf-provider configure
-dfmicro network peer --cluster odf-provider --cluster odf-consumer
+mt addon odf --cluster odf-provider configure
+mt network peer --cluster odf-provider --cluster odf-consumer
 ```
 
 For a host-networked provider, add workers before configuring it:
 
 ```console
 # Host-networked Ceph MONs need separate nodes, so use at least three nodes.
-dfmicro node add --cluster odf-provider
-dfmicro node add --cluster odf-provider
-dfmicro addon odf --cluster odf-provider configure --hostnetwork --multi-node
+mt node add --cluster odf-provider
+mt node add --cluster odf-provider
+mt addon odf --cluster odf-provider configure --hostnetwork --multi-node
 ```
 
 With either mode configured, onboard the client-only consumer:
 
 ```console
-dfmicro addon odf --cluster odf-consumer configure --client --connect-to odf-provider
+mt addon odf --cluster odf-consumer configure --client --connect-to odf-provider
 
-dfmicro cluster kubeconfig --name odf-provider >/tmp/odf-provider-kubeconfig
-dfmicro cluster kubeconfig --name odf-consumer >/tmp/odf-consumer-kubeconfig
+mt cluster kubeconfig --name odf-provider >/tmp/odf-provider-kubeconfig
+mt cluster kubeconfig --name odf-consumer >/tmp/odf-consumer-kubeconfig
 kubectl --kubeconfig /tmp/odf-provider-kubeconfig patch storageconsumer odf-consumer \
   -n openshift-storage --type=json \
   -p '[{"op":"add","path":"/spec/storageClasses","value":[{"name":"ocs-storagecluster-ceph-rbd"}]}]'

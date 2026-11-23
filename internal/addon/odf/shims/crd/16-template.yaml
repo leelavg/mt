@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: templates.template.openshift.io
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 spec:
   group: template.openshift.io
   names:

@@ -6,9 +6,9 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 BIN_DIR := bin
-BINARY := $(BIN_DIR)/dfmicro
+BINARY := $(BIN_DIR)/mt
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -X dfmicro/internal/buildinfo.BuildTime=$(BUILD_TIME)
+LDFLAGS := -X mt/internal/buildinfo.BuildTime=$(BUILD_TIME)
 TOPOLVM_VERSION ?= 17.3.1
 VOLSYNC_VERSION ?= 0.17.0
 VOLSYNC_CHART_COMMIT ?= d90957908caa97c9088111ad574f2c12ae3a4916
@@ -84,16 +84,16 @@ build: fmt vet generate fix
 
 install: build
 	mkdir -p ~/.local/bin
-	install $(BINARY) ~/.local/bin/dfmicro
+	install $(BINARY) ~/.local/bin/mt
 
 build-release: fmt vet generate
 	@mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(LDFLAGS)" -o $(BINARY) ./cmd/dfmicro
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(LDFLAGS)" -o $(BINARY) ./cmd/mt
 
 build-analyze: fmt vet generate
 	@mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/dfmicro
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/mt
 
 build-cross:
 	@mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/dfmicro
+	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/mt

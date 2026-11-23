@@ -14,7 +14,7 @@ crds_dir="${assets_dir}/velero-crds"
 resource_file="${assets_dir}/velero.yaml"
 template_file="${addon_dir}/velero_gen.go"
 marker="${assets_dir}/.velero-version"
-state="velero=${version} chart=${chart_version} aws-plugin=${plugin_version} namespace=openshift-adp bucket=dfmicro-odr pod-security=restricted registry=docker.io"
+state="velero=${version} chart=${chart_version} aws-plugin=${plugin_version} namespace=openshift-adp bucket=mt-odr pod-security=restricted registry=docker.io"
 
 if [[ -f "${marker}" ]] && [[ "$(<"${marker}")" == "${state}" ]] && [[ -s "${resource_file}" ]] && [[ -s "${template_file}" ]] && [[ -s "${crds_dir}/backups.velero.io.yaml" ]] && [[ -s "${crds_dir}/backupstoragelocations.velero.io.yaml" ]] && [[ -s "${crds_dir}/restores.velero.io.yaml" ]]; then
 	echo "Velero ${version} manifests are up to date"
@@ -82,7 +82,7 @@ containerSecurityContext:
     type: RuntimeDefault
 credentials:
   useSecret: true
-  name: dfmicro-velero-s3
+  name: mt-velero-s3
   secretContents:
     cloud: |
       [default]
@@ -93,11 +93,11 @@ configuration:
   backupStorageLocation:
     - name: default
       provider: aws
-      bucket: dfmicro-odr
+      bucket: mt-odr
       prefix: velero
       default: true
       credential:
-        name: dfmicro-velero-s3
+        name: mt-velero-s3
         key: cloud
       config:
         region: us-east-1
@@ -110,9 +110,9 @@ deployNodeAgent: false
 upgradeCRDs: false
 namespace:
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 labels:
-  app.kubernetes.io/created-by: dfmicro
+  app.kubernetes.io/created-by: mt
 EOF
 
 helm template velero "${chart}" \
@@ -132,7 +132,7 @@ mkdir -p "${crds_dir}"
 while IFS= read -r name; do
 	yq "select(.kind == \"CustomResourceDefinition\" and .metadata.name == \"${name}\")" "${crds}" \
 		>"${crds_dir}/${name}.yaml"
-	yq -i '(.metadata.labels = (.metadata.labels // {})) | .metadata.labels."app.kubernetes.io/created-by" = "dfmicro"' "${crds_dir}/${name}.yaml"
+	yq -i '(.metadata.labels = (.metadata.labels // {})) | .metadata.labels."app.kubernetes.io/created-by" = "mt"' "${crds_dir}/${name}.yaml"
 done < <(yq -r 'select(.kind == "CustomResourceDefinition" and .metadata.name != null) | .metadata.name' "${crds}" | sed '/^---$/d; /^null$/d; /^$/d')
 
 cat >"${resource_file}" <<'EOF'
@@ -142,9 +142,9 @@ kind: Namespace
 metadata:
   name: openshift-adp
   labels:
-    app.kubernetes.io/created-by: dfmicro
+    app.kubernetes.io/created-by: mt
 EOF
-yq -i '(.metadata.labels = (.metadata.labels // {})) | .metadata.labels."app.kubernetes.io/created-by" = "dfmicro"' "${resources}"
+yq -i '(.metadata.labels = (.metadata.labels // {})) | .metadata.labels."app.kubernetes.io/created-by" = "mt"' "${resources}"
 cat "${resources}" >>"${resource_file}"
 
 cat >"${template_file}" <<EOF

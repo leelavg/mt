@@ -1,4 +1,4 @@
-<h1><img src="internal/docs/assets/dfmicro.svg" alt="" width="32" height="32"> dfmicro</h1>
+<h1><img src="internal/docs/assets/mt.svg" alt="" width="32" height="32"> mt</h1>
 
 Run [MicroShift](https://github.com/openshift/microshift) clusters inside rootful Podman containers.
 Each cluster gets its own network, loop-device backed LVM storage, and a kubeconfig. Workers can be added when multi-node operation is needed.
@@ -11,28 +11,28 @@ The installer detects Linux or macOS and the amd64 or arm64 architecture, then
 downloads and verifies the matching release archive:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/leelavg/dfmicro/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/leelavg/mt/main/install.sh | sh
 ```
 
 Set `VERSION` to install a specific release, or `INSTALL_DIR` to change the
 destination directory:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/leelavg/dfmicro/main/install.sh |
+curl -fsSL https://raw.githubusercontent.com/leelavg/mt/main/install.sh |
   VERSION=0.0.2 INSTALL_DIR="$HOME/bin" sh
 ```
 
 List available releases without installing:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/leelavg/dfmicro/main/install.sh | sh -s -- --list
+curl -fsSL https://raw.githubusercontent.com/leelavg/mt/main/install.sh | sh -s -- --list
 ```
 
 Or build from source:
 
 ```
-git clone -b main https://github.com/leelavg/dfmicro
-cd dfmicro
+git clone -b main https://github.com/leelavg/mt
+cd mt
 make build
 ```
 
@@ -43,7 +43,7 @@ make build
 **Linux:** Configure the required privileged commands once:
 
 ```console
-dfmicro ops sudoers create
+mt ops sudoers create
 ```
 
 **macOS:** Initialize a rootful Podman machine once. If you do not already have
@@ -53,7 +53,7 @@ one, run:
 podman machine init --rootful
 ```
 
-Start the machine whenever you use dfmicro:
+Start the machine whenever you use mt:
 
 ```console
 podman machine start
@@ -62,12 +62,12 @@ podman machine start
 ### Create a cluster
 
 ```
-dfmicro cluster create              # create cluster with default name
-dfmicro cluster kubeconfig          # outputs the cluster kubeconfig to stdout
+mt cluster create              # create cluster with default name
+mt cluster kubeconfig          # outputs the cluster kubeconfig to stdout
 kubectl get nodes                   # save above config and run cluster operations
 
-dfmicro docs                        # for all the cli commands and args
-dfmicro docs --examples             # samples for specific scenarios
+mt docs                        # for all the cli commands and args
+mt docs --examples             # samples for specific scenarios
 ```
 
 ## Testing
@@ -75,7 +75,7 @@ dfmicro docs --examples             # samples for specific scenarios
 Run the suite on a clean Linux host with rootful Podman and sudoers created against the built binary:
 
 ```
-DFMICRO_BIN=./bin/dfmicro perl tests.pl --upto 8
+MT_BIN=./bin/mt perl tests.pl --upto 8
 ```
 
 Levels 4-7 require a local `tests.conf`, copied from `tests.conf.example`.
@@ -83,7 +83,7 @@ Levels 4-7 require a local `tests.conf`, copied from `tests.conf.example`.
 Run one level from a clean slate, including only that level's setup:
 
 ```
-DFMICRO_BIN=./bin/dfmicro perl tests.pl --level 6
+MT_BIN=./bin/mt perl tests.pl --level 6
 ```
 
 See all test options with:
@@ -107,13 +107,13 @@ Usage:	perl tests.pl [options]
   --help          	Show this help
 ```
 
-Test output and executed commands are written to `/tmp/dfmicro-test/tests.log`
-and `/tmp/dfmicro-test/cmds.log`.
+Test output and executed commands are written to `/tmp/mt-test/tests.log`
+and `/tmp/mt-test/cmds.log`.
 
 ## Command reference
 
 See [internal/docs/cli.md](internal/docs/cli.md) for the full command reference,
-or run `dfmicro docs` to print it.
+or run `mt docs` to print it.
 
 For development setup and design notes, see [dev.md](dev.md). For what is planned and what is done, see the [devlog](internal/docs/devlog.txt).
 
@@ -124,7 +124,7 @@ For development setup and design notes, see [dev.md](dev.md). For what is planne
 <br>
 IPs and Domain names mentioned are for default values, edit as per your cluster settings.
 
-Routes use a cluster-specific base domain, such as `metrics.apps.demo.dfmicro.io`, and need DNS resolution to the cluster node IP. Find your cluster's node IP:
+Routes use a cluster-specific base domain, such as `metrics.apps.demo.mt.test`, and need DNS resolution to the cluster node IP. Find your cluster's node IP:
 
 ```bash
 kubectl get nodes -o wide | grep 172.20
@@ -134,42 +134,42 @@ Choose your setup method (replace `172.20.0.11` with your actual node IP):
 
 **Linux with NetworkManager + dnsmasq:**
 ```bash
-echo 'address=/apps.demo.dfmicro.io/172.20.0.11' | sudo tee /etc/NetworkManager/dnsmasq.d/dfmicro.conf
+echo 'address=/apps.demo.mt.test/172.20.0.11' | sudo tee /etc/NetworkManager/dnsmasq.d/mt.conf
 
 sudo nmcli general reload dns-full
-curl -k https://metrics.apps.demo.dfmicro.io/metrics
+curl -k https://metrics.apps.demo.mt.test/metrics
 ```
 
 **Linux with standalone dnsmasq:**
 ```bash
-echo 'address=/apps.demo.dfmicro.io/172.20.0.11' | sudo tee /etc/dnsmasq.d/dfmicro.conf
+echo 'address=/apps.demo.mt.test/172.20.0.11' | sudo tee /etc/dnsmasq.d/mt.conf
 
 sudo systemctl reload dnsmasq
-curl -k https://metrics.apps.demo.dfmicro.io/metrics
+curl -k https://metrics.apps.demo.mt.test/metrics
 ```
 
 **Linux with systemd-resolved:**
 ```bash
-echo 'DNS=172.20.0.11' | sudo tee /etc/systemd/resolved.conf.d/dfmicro.conf
-echo 'Domains=~apps.demo.dfmicro.io' | sudo tee -a /etc/systemd/resolved.conf.d/dfmicro.conf
+echo 'DNS=172.20.0.11' | sudo tee /etc/systemd/resolved.conf.d/mt.conf
+echo 'Domains=~apps.demo.mt.test' | sudo tee -a /etc/systemd/resolved.conf.d/mt.conf
 sudo systemctl restart systemd-resolved
-curl -k https://metrics.apps.demo.dfmicro.io/metrics
+curl -k https://metrics.apps.demo.mt.test/metrics
 ```
 
 **Linux / macOS:**
 ```bash
-echo '172.20.0.11 metrics.apps.demo.dfmicro.io' | sudo tee -a /etc/hosts
-curl -k https://metrics.apps.demo.dfmicro.io/metrics
+echo '172.20.0.11 metrics.apps.demo.mt.test' | sudo tee -a /etc/hosts
+curl -k https://metrics.apps.demo.mt.test/metrics
 ```
 
 Or use `curl --resolve` (no `/etc/hosts` edit):
 ```bash
-curl -k --resolve metrics.apps.demo.dfmicro.io:443:172.20.0.11 https://metrics.apps.demo.dfmicro.io/metrics
+curl -k --resolve metrics.apps.demo.mt.test:443:172.20.0.11 https://metrics.apps.demo.mt.test/metrics
 ```
 
 **Cleanup:**
 ```bash
-sudo rm -f /etc/NetworkManager/dnsmasq.d/dfmicro.conf /etc/dnsmasq.d/dfmicro.conf
+sudo rm -f /etc/NetworkManager/dnsmasq.d/mt.conf /etc/dnsmasq.d/mt.conf
 sudo nmcli general reload dns-full || sudo systemctl reload dnsmasq
 ```
 </details>
@@ -177,7 +177,7 @@ sudo nmcli general reload dns-full || sudo systemctl reload dnsmasq
 <details>
 <summary>Why dnsmasq instead of in-cluster DNS?</summary>
 <br>
-Podman's aardvark-dns only resolves container names, not in-cluster routes. It has no upstream config to forward to CoreDNS. The router on node IP `172.20.0.11` handles SNI dispatch, so dnsmasq just needs to answer `*.apps.demo.dfmicro.io` with that IP.
+Podman's aardvark-dns only resolves container names, not in-cluster routes. It has no upstream config to forward to CoreDNS. The router on node IP `172.20.0.11` handles SNI dispatch, so dnsmasq just needs to answer `*.apps.demo.mt.test` with that IP.
 </details>
 
 <details>
@@ -199,9 +199,9 @@ kernel: watchdog0: pretimeout event
 sudo mdatp exclusion folder add --path "/var/lib/containers"
 
 # Exclude cluster LVM backing files (optional, for extra safety)
-dfmicro cluster config --name cluster-name | grep lvm-disk
-# Example: lvm-disk: /home/user/.config/dfmicro/cluster-name/cluster-name.img
-sudo mdatp exclusion folder add --path "/home/user/.config/dfmicro"
+mt cluster config --name cluster-name | grep lvm-disk
+# Example: lvm-disk: /home/user/.config/mt/cluster-name/cluster-name.img
+sudo mdatp exclusion folder add --path "/home/user/.config/mt"
 
 # Exclude microshift processes
 sudo mdatp exclusion process add --name microshift
@@ -226,7 +226,7 @@ sudo modprobe -r intel_oc_wdt
 
 Disables hardware watchdog completely. wdavdaemon falls back to software watchdog. Safe for development.
 
-**Why not fixed in dfmicro:** Real-time scanning is a host-level security feature. The exclusion must be configured on the host.
+**Why not fixed in mt:** Real-time scanning is a host-level security feature. The exclusion must be configured on the host.
 </details>
 
 <details>
@@ -251,7 +251,7 @@ For Podman Machine, install and load the module inside the VM that runs Podman. 
 
 ## Contributing
 
-Bug reports and suggestions are welcome via [issues](https://github.com/leelavg/dfmicro/issues). This is a personal project with a focused scope and occasional history rewrites for now, so pull requests are not being accepted at this time.
+Bug reports and suggestions are welcome via [issues](https://github.com/leelavg/mt/issues). This is a personal project with a focused scope and occasional history rewrites for now, so pull requests are not being accepted at this time.
 
 ## Acknowledgements
 

@@ -1,5 +1,5 @@
 [book]
-title = "dfmicro"
+title = "mt"
 language = "en"
 src = "."
 
@@ -13,8 +13,8 @@ admonitions = false
 additional-css = ["site.css"]
 additional-js = ["version.js"]
 site-url = "__SITE_URL__"
-edit-url-template = "https://github.com/leelavg/dfmicro/blob/__SOURCE_REF__/{path}"
-git-repository-url = "https://github.com/leelavg/dfmicro"
+edit-url-template = "https://github.com/leelavg/mt/blob/__SOURCE_REF__/{path}"
+git-repository-url = "https://github.com/leelavg/mt"
 
 [output.html.print]
 enable = false

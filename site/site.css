@@ -1,18 +1,18 @@
-#dfmicro-version {
+#mt-version {
     display: none;
     margin-right: 0.75rem;
     white-space: nowrap;
 }
 
-#dfmicro-version.dfmicro-ready {
+#mt-version.mt-ready {
     display: inline-block;
 }
 
-#dfmicro-version details {
+#mt-version details {
     position: relative;
 }
 
-#dfmicro-version summary {
+#mt-version summary {
     cursor: pointer;
     list-style: none;
     padding: 0.35rem 0.65rem;
@@ -21,7 +21,7 @@
     background: var(--theme-popup-bg);
 }
 
-#dfmicro-version ul {
+#mt-version ul {
     position: absolute;
     top: 100%;
     right: 0;
@@ -37,12 +37,12 @@
     background: var(--theme-popup-bg);
 }
 
-#dfmicro-version li a,
-#dfmicro-version li span {
+#mt-version li a,
+#mt-version li span {
     display: block;
     padding: 0.25rem 0.75rem;
 }
 
-#dfmicro-version [aria-current="page"] {
+#mt-version [aria-current="page"] {
     font-weight: 700;
 }

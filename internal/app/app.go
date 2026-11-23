@@ -6,16 +6,16 @@ import (
 	"log/slog"
 	"os"
 
-	"dfmicro/internal/addon"
-	"dfmicro/internal/buildinfo"
-	"dfmicro/internal/cluster"
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/docs"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/network"
-	"dfmicro/internal/node"
-	"dfmicro/internal/ops"
-	"dfmicro/internal/support"
+	"mt/internal/addon"
+	"mt/internal/buildinfo"
+	"mt/internal/cluster"
+	rootconfig "mt/internal/config"
+	"mt/internal/docs"
+	"mt/internal/execx"
+	"mt/internal/network"
+	"mt/internal/node"
+	"mt/internal/ops"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -24,7 +24,7 @@ func docsCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "docs",
 		Usage:     "Print full command reference as markdown",
-		UsageText: "dfmicro docs > cli.md",
+		UsageText: "mt docs > cli.md",
 		MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
 			{
 				Flags: [][]cli.Flag{
@@ -34,7 +34,7 @@ func docsCommand() *cli.Command {
 					}},
 					{&cli.BoolFlag{
 						Name:  "skill",
-						Usage: "Print agent guidance for operating dfmicro",
+						Usage: "Print agent guidance for operating mt",
 					}},
 					{&cli.BoolFlag{
 						Name:   "devlog",
@@ -89,18 +89,18 @@ func Command(logger *slog.Logger, runner execx.Runner) *cli.Command {
 		Name:    support.BinaryName,
 		Usage:   "Run MicroShift clusters in rootful Podman containers",
 		Version: buildinfo.String(),
-		Description: `dfmicro creates and manages single- and multi-node MicroShift clusters inside rootful Podman containers.
+		Description: `mt creates and manages single- and multi-node MicroShift clusters inside rootful Podman containers.
 Each cluster gets its own Podman network and a loop-device backed LVM thin pool for TopoLVM storage.
 
 Verified on: Linux (Fedora / RHEL)
 Best-effort support: macOS (requires rootful Podman machine via 'podman machine init --rootful')
 
 Quick start:
-  dfmicro ops sudoers create                   # one-time: passwordless sudo for cluster tools
-  dfmicro cluster create                       # create cluster with default name
-  dfmicro cluster kubeconfig > ~/.kube/config  # overwrites kubeconfig!
+  mt ops sudoers create                   # one-time: passwordless sudo for cluster tools
+  mt cluster create                       # create cluster with default name
+  mt cluster kubeconfig > ~/.kube/config  # overwrites kubeconfig!
   kubectl get nodes
-  dfmicro cluster delete                       # tear everything down`,
+  mt cluster delete                       # tear everything down`,
 		EnableShellCompletion: true,
 		ConfigureShellCompletionCommand: func(cmd *cli.Command) {
 			cmd.Hidden = false

@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"strings"
 
-	rootconfig "dfmicro/internal/config"
-	"dfmicro/internal/execx"
-	"dfmicro/internal/support"
+	rootconfig "mt/internal/config"
+	"mt/internal/execx"
+	"mt/internal/support"
 
 	"github.com/urfave/cli/v3"
 )
@@ -52,9 +52,9 @@ Note: --cluster applies to all subcommands and must come before the subcommand n
 			{
 				Name:  "configure",
 				Usage: "Configure S3 and managed clusters for ODR",
-				UsageText: `Requires local-s3 attached to the hub and both managed clusters. Creates the shared dfmicro-odr bucket.
+				UsageText: `Requires local-s3 attached to the hub and both managed clusters. Creates the shared mt-odr bucket.
 
-For CephFS RDR, run dfmicro ops network --sync-clusterset after the destination ServiceExport appears.`,
+For CephFS RDR, run mt ops network --sync-clusterset after the destination ServiceExport appears.`,
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{Name: "managed-cluster", Usage: "ManagedCluster name (repeatable or comma separated)"},
 					&cli.StringFlag{
