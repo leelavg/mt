@@ -17,12 +17,12 @@ The examples below were verified with this build and configuration:
 
 ```console
 $ mt -v
-mt version dev (none, 2026-10-24T12:16:49Z)
+mt version dev (none, 2026-11-23T12:13:55Z)
 
 $ mt config
 {
   "name": "micro",
-  "image": "ghcr.io/leelavg/microshift:5.0.0_202609201132_g4582bf673_5.0.0_okd_scos.ec.8",
+  "image": "ghcr.io/leelavg/microshift:5.1.0_202611161345_g68a5f5e9e_5.1.0_okd_scos.ec.3",
   "powerTuning": true,
   "apiServerPort": 6443,
   "clusterCIDR": "10.42.0.0/16",
@@ -60,11 +60,29 @@ kubectl get nodes -o wide
 kubectl get pods -A
 ```
 
-Stop and start the cluster without removing its state.
+Stop and start the cluster without removing its state or use `--pause` and
+`--unpause` to freeze the cluster in memory.
 
 ```console
 mt cluster stop --name demo
 mt cluster start --name demo
+```
+
+## Install Metrics Server
+
+Create a cluster for this example, install Metrics Server, then query node and
+pod usage with `kubectl top`.
+
+```console
+mt cluster create --name metrics-demo --no-topolvm
+mt addon metrics --cluster metrics-demo install
+mt cluster kubeconfig --name metrics-demo >/tmp/metrics-demo-kubeconfig
+
+kubectl --kubeconfig /tmp/metrics-demo-kubeconfig top nodes
+kubectl --kubeconfig /tmp/metrics-demo-kubeconfig top pods -A
+
+mt addon metrics --cluster metrics-demo uninstall
+mt cluster rm --name metrics-demo
 ```
 
 ## Use a shared local S3 service
@@ -269,8 +287,8 @@ Create a single-node cluster, then install and configure ODF:
 mt cluster create --name standalone
 mt addon odf modules load
 mt addon odf --cluster standalone install \
-  --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
-  --channel stable-5.0 --version 5.0.0
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0
 mt addon odf --cluster standalone configure
 
 mt cluster kubeconfig --name standalone >/tmp/standalone-kubeconfig
@@ -289,11 +307,11 @@ mt cluster create --name rook-provider --api-server-port 6443
 mt cluster create --name rook-consumer --api-server-port 6444
 mt addon odf modules load
 mt addon odf --cluster rook-provider install \
-  --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
-  --channel stable-5.0 --version 5.0.0 --sub-name rook-ceph-operator
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0 --sub-name rook-ceph-operator
 mt addon odf --cluster rook-consumer install \
-  --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
-  --channel stable-5.0 --version 5.0.0 --sub-name odf-operator
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0 --sub-name odf-operator
 ```
 
 Configure Rook on `rook-provider`, then connect `rook-consumer` to it:
@@ -320,11 +338,11 @@ mt cluster create --name odf-consumer --api-server-port 6444 \
   --cluster-cidr 10.52.0.0/16 --service-cidr 10.53.0.0/16
 mt addon odf modules load
 mt addon odf --cluster odf-provider install \
-  --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
-  --channel stable-5.0 --version 5.0.0 --sub-name odf-operator
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0 --sub-name odf-operator
 mt addon odf --cluster odf-consumer install \
-  --catalog-image quay.io/example/odf-operator-catalog:v5.0 \
-  --channel stable-5.0 --version 5.0.0 --sub-name ocs-client-operator
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0 --sub-name ocs-client-operator
 ```
 
 Choose one provider network mode. For a single-node provider without host
@@ -359,3 +377,135 @@ kubectl --kubeconfig /tmp/odf-consumer-kubeconfig get storageclass
 
 Create workloads in `odf-consumer` using the published `ocs-storagecluster-ceph-rbd`
 StorageClass to verify client-side provisioning and access.
+
+## Join clusters to an OCM hub
+
+Create a hub and a spoke for this example. Use unique API server ports when
+creating multiple clusters on one host.
+
+```console
+mt cluster create --name ocm-hub --no-topolvm --api-server-port 6443
+mt cluster create --name ocm-spoke --no-topolvm --api-server-port 6444
+
+mt addon ocm --list-addons
+mt addon ocm --cluster ocm-hub install --version 5.1.0
+```
+
+Join a spoke without installing addons:
+
+```console
+mt addon ocm --cluster ocm-hub configure --spoke ocm-spoke
+```
+
+Configure an addon on the hub only by omitting `--spoke`:
+
+```console
+mt addon ocm --cluster ocm-hub configure --addon application-manager
+```
+
+Join spokes and install the supported addon set on the hub and spokes:
+
+```console
+mt addon ocm --cluster ocm-hub configure \
+  --spoke ocm-spoke \
+  --addon application-manager,argocd,config-policy-controller,governance-policy-framework
+```
+
+Inspect the managed clusters on the hub:
+
+```console
+mt cluster kubeconfig --name ocm-hub >/tmp/ocm-hub-kubeconfig
+kubectl --kubeconfig /tmp/ocm-hub-kubeconfig get managedclusters
+```
+
+## Configure ODF disaster recovery
+
+These examples assume the `hub`, `spoke-1`, and `spoke-2` clusters already
+exist, with non-overlapping cluster and service CIDRs. Each example shows the
+OCM membership and network setup used by that DR mode. Install local-S3 and
+attach it to all three clusters. ODR creates its bucket during configure.
+
+### Asynchronous DR (RDR)
+
+The two ODF provider clusters are the OCM managed clusters. Peer them so the
+clusters can reach each other's Ceph services, then configure route DNS.
+
+```console
+mt network peer --cluster spoke-1 --cluster spoke-2
+mt ops routes create
+
+mt addon local-s3 install
+mt addon local-s3 configure \
+  --attach-to hub --attach-to spoke-1 --attach-to spoke-2
+
+mt addon ocm --cluster hub install --version 5.1.0
+mt addon ocm --cluster hub configure \
+  --spoke spoke-1 --spoke spoke-2 \
+  --addon application-manager,argocd,config-policy-controller,governance-policy-framework
+
+mt addon odf modules load
+mt addon odf --cluster spoke-1 install \
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0
+mt addon odf --cluster spoke-1 configure
+mt addon odf --cluster spoke-2 install \
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0
+mt addon odf --cluster spoke-2 configure
+
+mt addon odr --cluster hub install \
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0
+
+mt addon odr --cluster hub configure \
+  --managed-cluster spoke-1,spoke-2 --type async
+```
+
+To include CephFS, add `--include-cephfs` to both provider `configure`
+commands.
+
+### Synchronous DR (MDR)
+
+The hub provides ODF storage and is also joined to OCM. Peer the hub with each
+client cluster, then configure route DNS. `--map-from spoke-1` reuses the
+provider mapping for the second client.
+
+```console
+mt network peer --cluster hub --cluster spoke-1
+mt network peer --cluster hub --cluster spoke-2
+mt ops routes create
+
+mt addon local-s3 install
+mt addon local-s3 configure \
+  --attach-to hub --attach-to spoke-1 --attach-to spoke-2
+
+mt addon ocm --cluster hub install --version 5.1.0
+mt addon ocm --cluster hub configure \
+  --spoke hub --spoke spoke-1 --spoke spoke-2 \
+  --addon application-manager,argocd,config-policy-controller,governance-policy-framework
+
+mt addon odr --cluster hub install \
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0
+
+mt addon odf modules load
+mt addon odf --cluster hub install \
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --channel stable-5.1 --version 5.1.0
+mt addon odf --cluster hub configure
+
+mt addon odf --cluster spoke-1 install \
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --sub-name ocs-client-operator --channel stable-5.1 --version 5.1.0
+mt addon odf --cluster spoke-1 configure --client --connect-to hub
+mt addon odf --cluster spoke-2 install \
+  --catalog-image quay.io/example/odf-operator-catalog:v5.1 \
+  --sub-name ocs-client-operator --channel stable-5.1 --version 5.1.0
+mt addon odf --cluster spoke-2 configure --client --connect-to hub --map-from spoke-1
+
+mt addon odr --cluster hub configure \
+  --managed-cluster spoke-1,spoke-2 --type sync
+```
+
+To include CephFS, add `--include-cephfs` to the hub and both client `configure`
+commands.

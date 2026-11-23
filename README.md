@@ -67,6 +67,7 @@ mt cluster kubeconfig          # outputs the cluster kubeconfig to stdout
 kubectl get nodes                   # save above config and run cluster operations
 
 mt docs                        # for all the cli commands and args
+mt docs --skill                # driving mt using any of your agents
 mt docs --examples             # samples for specific scenarios
 ```
 

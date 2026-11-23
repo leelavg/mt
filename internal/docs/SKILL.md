@@ -12,10 +12,6 @@ mt runs MicroShift clusters as rootful Podman containers. A cluster starts with 
 - Linux: rootful Podman, sudo access, LVM/device-mapper tools (`vgcreate`, `lvcreate`, `dmsetup`), and loop-device tools (`losetup`). Choose a privileged-operation method described below.
 - macOS: a rootful Podman machine, initialized with `podman machine init --rootful`. Linux-specific privileged operations run inside the VM. macOS support is best-effort.
 
-## Addons
-
-- ODF use additionally requires the host kernel modules loaded with `mt addon odf modules load` and idms/pull-secret mounts during cluster creation for private catalogs.
-
 ## Host networking gotcha
 
 - Some Linux installations do not include `xt_comment` by default. Install the distribution package that provides extra kernel modules containing `xt_comment`, then load it with `sudo modprobe xt_comment` in the environment running rootful Podman. Without it, kindnet can intermittently panic while synchronizing iptables rules, leaving pod networking broken. On macOS, install and load the module in the Podman machine's Linux environment, not on the macOS host.
@@ -31,7 +27,7 @@ mt runs MicroShift clusters as rootful Podman containers. A cluster starts with 
 
 Before changing anything, inspect the current state with `mt cluster ls`, `mt cluster config`, and the relevant `mt node config` or `mt network config` commands if node/network exists. Check the command help when options or defaults matter.
 
-Create a cluster with `mt cluster create`, then add workers with `mt node add` as needed. Networking and addons are separate operations layered onto existing clusters: create and connect Podman networks with `mt network`, configure pod networking with `mt network attach`, and use peer operations when cluster-CIDR routing between clusters is needed. Install, configure, and uninstall addons independently with `mt addon <name>`.
+Create a cluster with `mt cluster create`, then add workers with `mt node add` as needed. Networking and addons `mt addon --list` are separate operations layered onto existing clusters: create and connect Podman networks with `mt network`, configure pod networking with `mt network attach`, and use peer operations when cluster-CIDR routing between clusters is needed. Install, configure, and uninstall addons independently with `mt addon <name>`.
 
 Container bind mounts are fixed when a node container is created. Restarting does not change them. Control-node mounts are selected at cluster creation. Worker-specific mounts can be supplied to `mt node add`. Changing a worker's mounts requires removing and re-adding that worker.
 
