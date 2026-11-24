@@ -141,7 +141,7 @@ func (m *manager) reconcileWorker(ctx context.Context, w worker) error {
 	if _, err := support.RunPodmanPrivileged(ctx, m.runner, "exec", w.controlNodeName, "oc", "wait", "--for=create", "--timeout=120s", "node/"+w.name); err != nil {
 		return fmt.Errorf("wait for worker node before labeling: %w", err)
 	}
-	if _, err := support.RunPodmanPrivileged(ctx, m.runner, "exec", w.controlNodeName, "oc", "label", "node", w.name, "mt.test/whereabouts=enabled", "--overwrite"); err != nil {
+	if _, err := support.RunPodmanPrivileged(ctx, m.runner, "exec", w.controlNodeName, "oc", "label", "node", w.name, "dfmicro.io/whereabouts=enabled", "--overwrite"); err != nil {
 		return fmt.Errorf("label worker node for whereabouts: %w", err)
 	}
 	return nil

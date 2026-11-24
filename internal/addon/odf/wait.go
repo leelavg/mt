@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"mt/internal/execx"
 	"mt/internal/support"
@@ -47,4 +48,18 @@ func waitForCSV(ctx context.Context, runner execx.Runner, kubeClient, kubeconfig
 		return "", err
 	}
 	return csvName, nil
+}
+
+func waitForCSVWebhookEndpoint(ctx context.Context, runner execx.Runner, kubeClient, kubeconfig string) error {
+	return support.Poll(ctx, odfPoll, 2*time.Minute, func(ctx context.Context) (bool, error) {
+		result, err := runner.Run(ctx, kubeClient,
+			"get", "endpoints", "odf-operator-webhook-server-service", "-n", providerNamespace,
+			"-o", "jsonpath={.subsets[*].addresses[*].ip}",
+			"--kubeconfig", kubeconfig,
+		)
+		if err != nil {
+			return false, fmt.Errorf("get ODF CSV webhook endpoints: %w", err)
+		}
+		return strings.TrimSpace(result.Stdout) != "", nil
+	})
 }

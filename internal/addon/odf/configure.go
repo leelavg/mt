@@ -68,6 +68,10 @@ func (o *odf) configureStorage(ctx context.Context, cfg configureConfig) error {
 		return err
 	}
 	o.logger.Info("CRD established", "name", crd)
+	o.logger.Info("waiting for ODF CSV webhook endpoint")
+	if err := waitForCSVWebhookEndpoint(ctx, o.runner, support.KubeClient, o.kubeconfig); err != nil {
+		return fmt.Errorf("wait for ODF CSV webhook endpoint: %w", err)
+	}
 	if !cfg.multiNode {
 		o.logger.Info("patching ocs-operator subscription with SINGLE_NODE")
 		if err := o.patchOCSSubscription(ctx); err != nil {

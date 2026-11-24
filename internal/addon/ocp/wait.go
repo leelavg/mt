@@ -59,13 +59,16 @@ func WaitForCSV(ctx context.Context, runner execx.Runner, kubeClient, kubeconfig
 		result, err := runner.Run(ctx, kubeClient,
 			"get", "csv", "-n", namespace,
 			"-l", "operators.coreos.com/"+operator+"."+namespace,
-			"-o", "jsonpath={.items[0].metadata.name}",
+			"-o", `jsonpath={range .items[*]}{.metadata.name}{"\n"}{end}`,
 			"--kubeconfig", kubeconfig,
 		)
 		if err != nil {
 			return false, fmt.Errorf("get %s CSV: %w", operator, err)
 		}
-		csvName = strings.TrimSpace(result.Stdout)
+		csvNames := strings.Fields(result.Stdout)
+		if len(csvNames) > 0 {
+			csvName = csvNames[0]
+		}
 		return csvName != "", nil
 	})
 	if err != nil {

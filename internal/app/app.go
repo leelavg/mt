@@ -100,7 +100,9 @@ Quick start:
   mt cluster create                       # create cluster with default name
   mt cluster kubeconfig > ~/.kube/config  # overwrites kubeconfig!
   kubectl get nodes
-  mt cluster delete                       # tear everything down`,
+  mt cluster delete                       # tear everything down
+
+Source: https://github.com/leelavg/mt`,
 		EnableShellCompletion: true,
 		ConfigureShellCompletionCommand: func(cmd *cli.Command) {
 			cmd.Hidden = false

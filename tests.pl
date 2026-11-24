@@ -9,6 +9,7 @@ use strict;
 use warnings;
 use Getopt::Long qw(GetOptions);
 use Text::ParseWords qw(shellwords);
+use Fcntl qw(O_CREAT O_TRUNC O_WRONLY);
 
 my $upto;
 my $level;
@@ -87,7 +88,7 @@ my $config_home = $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config";
 my $config_dir = "$config_home/mt";
 my $test_conf = $ENV{MT_TEST_CONF} || 'tests.conf';
 my $work_dir = '/tmp/mt-test';
-my ($tests, $failed) = (0, 0);
+my ($tests, $failed, $skipped) = (0, 0, 0);
 my $started = 0;
 my $local_s3_installed = 0;
 my $interrupted;
@@ -123,16 +124,27 @@ sub check {
 	}
 }
 
+sub skip {
+	my ($name, $reason, $scope) = @_;
+	if ($list_only) {
+		check(1, $name, $scope);
+		return;
+	}
+	$tests++;
+	$skipped++;
+	print "[", local_timestamp(), "] ok $tests - $name # SKIP $reason\n";
+}
+
 sub finish {
 	return exit($failed ? 1 : 0) if $list_only;
 	if (defined $current_level) {
 		$level_elapsed{$current_level} = int(time - $current_level_started);
 	}
-	my $passed = $tests - $failed;
+	my $passed = $tests - $failed - $skipped;
 	my $elapsed = int(time - $started_at);
 	my $duration = format_duration($elapsed);
 	print "1..$tests\n";
-	print "# total: $tests, ok: $passed, not ok: $failed, elapsed: $duration\n";
+	print "# total: $tests, ok: $passed, skipped: $skipped, not ok: $failed, elapsed: $duration\n";
 	for my $level (sort keys %level_elapsed) {
 		print "# $level elapsed: ", format_duration($level_elapsed{$level}), "\n";
 	}
@@ -291,15 +303,28 @@ sub run_process {
     }
 
     my $max_lines = $options{max_lines};
+    my $status;
     if (defined $max_lines) {
+        open my $pipe, '-|', 'sh', '-c', $command . ' 2>&1'
+            or die "start $program: $!";
         open my $log, '>>', "$work_dir/tests.log" or die "open test log: $!";
-        print {$log} "# output truncated to ${max_lines} lines\n";
-        close $log;
+        my $line_count = 0;
+        my $truncated = 0;
+        while (my $line = <$pipe>) {
+            if ($line_count < $max_lines) {
+                print {$log} $line;
+            } elsif (!$truncated) {
+                print {$log} "# output truncated to ${max_lines} lines\n";
+                $truncated = 1;
+            }
+            $line_count++;
+        }
+        close $log or die "close test log: $!";
+        close $pipe;
+        $status = $?;
+    } else {
+        $status = system('sh', '-c', $command . " >> " . shell_quote("$work_dir/tests.log") . ' 2>&1');
     }
-    my $output = defined $max_lines
-        ? " 2>&1 | sed -n '1,${max_lines}p' >> " . shell_quote("$work_dir/tests.log")
-        : " >> " . shell_quote("$work_dir/tests.log") . " 2>&1";
-    my $status = system('sh', '-c', $command . $output);
     note_child_signal($status);
     abort_if_interrupted();
     return ($status == 0, '');
@@ -343,7 +368,9 @@ sub run_ok {
 
 sub run_ok_limited {
 	my ($name, $command, $scope) = @_;
-	check(run_command($command, 10), $name, $scope);
+	my $passed = run_command($command, 10);
+	check($passed, $name, $scope);
+	return $passed;
 }
 
 sub run_fail {
@@ -383,6 +410,46 @@ sub kubectl_ok {
 	return $passed;
 }
 
+sub log_kubectl_diagnostic {
+	my ($kubeconfig, $name, @args) = @_;
+	my ($passed, $output) = capture('kubectl', '--kubeconfig', $kubeconfig, @args);
+	open my $log, '>>', "$work_dir/tests.log" or die "open test log: $!";
+	print {$log} "\n# diagnostic: $name (", ($passed ? 'ok' : 'failed'), ")\n";
+	print {$log} $output;
+	print {$log} "\n" unless $output =~ /\n\z/;
+	close $log or die "close test log: $!";
+}
+
+sub odf_webhook_diagnostics {
+	my ($kubeconfig) = @_;
+	open my $log, '>>', "$work_dir/tests.log" or die "open test log: $!";
+	print {$log} "\n# ODF webhook diagnostics before cleanup\n";
+	close $log or die "close test log: $!";
+	log_kubectl_diagnostic($kubeconfig, 'ODF CSV mutating webhook',
+		'get', 'mutatingwebhookconfiguration', 'csv.odf.openshift.io', '-o', 'yaml');
+	log_kubectl_diagnostic($kubeconfig, 'ODF webhook Service and Endpoints',
+		'get', 'service/odf-operator-webhook-server-service', 'endpoints/odf-operator-webhook-server-service', '-n', 'openshift-storage', '-o', 'wide');
+	log_kubectl_diagnostic($kubeconfig, 'ODF webhook EndpointSlices',
+		'get', 'endpointslices', '-n', 'openshift-storage', '-l', 'kubernetes.io/service-name=odf-operator-webhook-server-service', '-o', 'wide');
+	log_kubectl_diagnostic($kubeconfig, 'ODF operator pods',
+		'get', 'pods', '-n', 'openshift-storage', '-l', 'app.kubernetes.io/name=odf-operator', '-o', 'wide');
+	log_kubectl_diagnostic($kubeconfig, 'ODF operator logs',
+		'logs', '-n', 'openshift-storage', '-l', 'app.kubernetes.io/name=odf-operator', '--all-containers', '--since=10m', '--tail=100');
+	log_kubectl_diagnostic($kubeconfig, 'ODF OLM resources',
+		'get', 'subscriptions.operators.coreos.com,installplans.operators.coreos.com,csv.operators.coreos.com', '-n', 'openshift-storage', '-o', 'yaml');
+	log_kubectl_diagnostic($kubeconfig, 'ODF namespace events',
+		'get', 'events', '-n', 'openshift-storage', '--sort-by=.lastTimestamp');
+	log_kubectl_diagnostic($kubeconfig, 'catalog operator logs',
+		'logs', '-n', 'openshift-operator-lifecycle-manager', 'deployment/catalog-operator', '--since=10m', '--tail=100');
+}
+
+sub configure_odf_provider {
+	my ($name, $command, $kubeconfig) = @_;
+	my $passed = run_ok($name, $command);
+	odf_webhook_diagnostics($kubeconfig) unless $passed;
+	return $passed;
+}
+
 sub kubectl_fail {
 	my ($name, $kubeconfig, $command) = @_;
 	my ($scope) = $kubeconfig =~ m{([^/]+)-kubeconfig$};
@@ -396,6 +463,7 @@ sub kubectl_with_input {
     my ($passed) = run_process('kubectl', \@args, input => $input);
 	my ($scope) = $kubeconfig =~ m{([^/]+)-kubeconfig$};
 	check($passed, $name, $scope);
+	return $passed;
 }
 
 sub run_netshoot {
@@ -417,8 +485,11 @@ spec:
       capabilities:
         add: ["NET_RAW"]
 YAML
-    kubectl_with_input("create netshoot $name", $kubeconfig, $manifest);
-    kubectl_ok("wait for netshoot $name", $kubeconfig, "wait --for=condition=Ready pod/$name --timeout=60s");
+	unless (kubectl_with_input("create netshoot $name", $kubeconfig, $manifest)) {
+		skip("wait for netshoot $name", 'pod creation failed');
+		return;
+	}
+	return kubectl_ok("wait for netshoot $name", $kubeconfig, "wait --for=condition=Ready pod/$name --timeout=60s");
 }
 
 sub run_local_s3_client {
@@ -440,7 +511,8 @@ sub read_s3_object {
 sub pod_ip {
     my ($kubeconfig, $pod) = @_;
     my ($passed, $ip) = capture('kubectl', '--kubeconfig', $kubeconfig, 'get', 'pod', $pod, '-o', 'jsonpath={.status.podIP}');
-    return $passed ? $ip : undef;
+    $ip =~ s/^\s+|\s+$//g;
+    return $passed && length $ip ? $ip : undef;
 }
 
 sub network_ip {
@@ -455,16 +527,24 @@ sub network_ip {
 
 sub fping {
     my ($name, $kubeconfig, $source, $target, $should_work) = @_;
-    my $command = "exec $source -- fping -c 1 -t 1000 $target";
-    my $passed = kubectl($kubeconfig, $command);
-    check($passed == $should_work, $name);
+    unless (defined $target && $target ne '') {
+        skip($name, 'target pod IP is unavailable');
+        return;
+    }
+    my $script = 'command -v fping >/dev/null 2>&1 || { printf "__MT_FPING_STATUS=127\\n"; exit 0; }; fping -c 1 -t 1000 "$1"; status=$?; printf "__MT_FPING_STATUS=%s\\n" "$status"; exit 0';
+    my ($passed, $output) = capture(
+        'kubectl', '--kubeconfig', $kubeconfig, 'exec', $source, '--',
+        'sh', '-c', $script, 'mt-fping', $target,
+    );
+    my ($status) = $output =~ /^__MT_FPING_STATUS=(\d+)\s*$/m;
+    check($passed && defined $status && ($should_work ? $status == 0 : $status == 1), $name);
 }
 
 sub node_has_whereabouts_label {
 	my ($kubeconfig, $node) = @_;
 	my ($passed, $value) = capture(
 		'kubectl', '--kubeconfig', $kubeconfig, 'get', 'node', $node,
-		'-o', 'jsonpath={.metadata.labels.mt\\.io/whereabouts}',
+		'-o', 'jsonpath={.metadata.labels.dfmicro\\.io/whereabouts}',
 	);
 	return $passed && $value eq 'enabled';
 }
@@ -519,11 +599,21 @@ sub test_storage {
 	$timeout //= 60;
 	my ($cluster) = $node =~ /^(.*)-\d+$/;
 	my $prefix = defined $cluster ? "[$cluster] " : '';
-	kubectl_with_input("${prefix}create $name StatefulSet", $kubeconfig, storage_manifest($name, $node, $storage_class));
-	kubectl_ok("${prefix}wait for $name PVC", $kubeconfig, "wait --for=create --for=jsonpath={.status.phase}=Bound --timeout=${timeout}s pvc/data-$name-0 -n default");
-	kubectl_ok("${prefix}wait for $name StatefulSet", $kubeconfig, "rollout status statefulset/$name -n default --timeout=${timeout}s");
-	kubectl_ok("${prefix}write to $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'printf mt > /data/check'");
-	kubectl_ok("${prefix}read from $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'test \$(cat /data/check) = mt'");
+	unless (kubectl_with_input("${prefix}create $name StatefulSet", $kubeconfig, storage_manifest($name, $node, $storage_class))) {
+		skip_storage_workload_checks($cluster, $name, 'StatefulSet creation failed');
+		return;
+	}
+	unless (kubectl_ok("${prefix}wait for $name PVC", $kubeconfig, "wait --for=create --for=jsonpath={.status.phase}=Bound --timeout=${timeout}s pvc/data-$name-0 -n default")) {
+		skip("${prefix}wait for $name StatefulSet", 'PVC did not bind');
+		skip("${prefix}write to $name volume", 'PVC did not bind');
+		skip("${prefix}read from $name volume", 'PVC did not bind');
+	} elsif (!kubectl_ok("${prefix}wait for $name StatefulSet", $kubeconfig, "rollout status statefulset/$name -n default --timeout=${timeout}s")) {
+		skip("${prefix}write to $name volume", 'StatefulSet did not become ready');
+		skip("${prefix}read from $name volume", 'StatefulSet did not become ready');
+	} else {
+		kubectl_ok("${prefix}write to $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'printf mt > /data/check'");
+		kubectl_ok("${prefix}read from $name volume", $kubeconfig, "exec -n default $name-0 -- sh -c 'test \$(cat /data/check) = mt'");
+	}
 	unless ($keep) {
 		kubectl_ok("${prefix}delete $name StatefulSet", $kubeconfig, "delete statefulset $name -n default --wait=true --timeout=60s");
 		kubectl_ok("${prefix}wait for $name PVC deletion", $kubeconfig, "wait --for=delete pvc/data-$name-0 -n default --timeout=60s");
@@ -539,11 +629,19 @@ sub kubeconfig {
 		return $path;
     }
     my ($passed, $output) = capture($mt, 'cluster', 'kubeconfig', '--name', $name);
-	check($passed && $output ne '', "write $name kubeconfig", $name);
-    open my $file, '>', $path or die "write $path: $!";
-    print {$file} $output;
-    close $file or die "close $path: $!";
+	$passed = $passed && $output ne '';
+	check($passed, "write $name kubeconfig", $name);
+	return unless $passed;
+	write_private_file($path, $output);
     return $path;
+}
+
+sub write_private_file {
+	my ($path, $contents) = @_;
+	sysopen my $file, $path, O_WRONLY | O_CREAT | O_TRUNC, 0600 or die "write $path: $!";
+	chmod 0600, $path or die "set permissions on $path: $!";
+	print {$file} $contents or die "write $path: $!";
+	close $file or die "close $path: $!";
 }
 
 sub config_is_empty {
@@ -564,19 +662,23 @@ sub clean_slate {
 
 sub remove_cluster {
     my ($name) = @_;
-    run_command("cluster rm --name $name");
+    return 1 unless cluster_config_exists($name);
+    return run_command("cluster rm --name $name");
 }
 
 sub remove_network {
-	run_command("network delete --name $network");
+	return run_command("network delete --name $network");
 }
 
 sub remove_netshoots {
-	return unless defined $micro_kubeconfig && defined $first_kubeconfig;
+	my $passed = 1;
 	for my $pod (qw(first-default-a micro-gp1-a first-gp1-b micro-gp1-b first-default-b micro-default-b first-default-c micro-default-c plain-first plain-micro plain-micro-new mt-s3-micro mt-s3-first)) {
 		my $kubeconfig = $pod =~ /^first/ ? $first_kubeconfig : $micro_kubeconfig;
-		run_program('kubectl', "--kubeconfig $kubeconfig delete pod $pod --ignore-not-found --grace-period=2 --wait=false");
+		next unless defined $kubeconfig;
+		my $deleted = run_program('kubectl', "--kubeconfig $kubeconfig delete pod $pod --ignore-not-found --grace-period=2 --wait=false");
+		$passed = 0 unless $deleted;
 	}
+	return $passed;
 }
 
 sub remove_storage_workloads {
@@ -585,14 +687,16 @@ sub remove_storage_workloads {
 		$micro => [qw(mt-odf-external mt-odf-client)],
 	);
 	my @clusters = @_ ? @_ : ($first, $micro);
+	my $passed = 1;
 	for my $cluster (@clusters) {
 		my $kubeconfig = $cluster eq $first ? $first_kubeconfig : $micro_kubeconfig;
 		next unless defined $kubeconfig;
 		for my $name (@{$workloads{$cluster}}) {
-			kubectl($kubeconfig, "delete statefulset $name -n default --ignore-not-found --grace-period=5 --wait=true --timeout=10s");
-			kubectl($kubeconfig, "delete pvc data-$name-0 -n default --ignore-not-found --grace-period=5 --wait=true --timeout=10s");
+			$passed = 0 unless kubectl($kubeconfig, "delete statefulset $name -n default --ignore-not-found --grace-period=5 --wait=true --timeout=60s");
+			$passed = 0 unless kubectl($kubeconfig, "delete pvc data-$name-0 -n default --ignore-not-found --grace-period=5 --wait=true --timeout=60s");
 		}
 	}
+	return $passed;
 }
 
 sub pause_before_cleanup {
@@ -602,56 +706,71 @@ sub pause_before_cleanup {
 }
 
 sub cleanup_network_state {
-	return if $list_only;
-	remove_netshoots();
-	run_command("network unpeer --cluster $first,$micro");
-	run_command("network detach --cluster $first:default/gp1,$micro:default/gp1 --from $network");
-	remove_network();
+	return 1 if $list_only;
+	my $passed = remove_netshoots();
+	$passed = 0 unless run_command("network unpeer --cluster $first,$micro");
+	$passed = 0 unless run_command("network detach --cluster $first:default/gp1,$micro:default/gp1 --from $network");
+	$passed = 0 unless remove_network();
+	return $passed;
 }
 
 sub cleanup_local_s3 {
-	return unless $local_s3_installed;
+	return 1 unless $local_s3_installed;
 	if (run_command('addon local-s3 uninstall --cleanup')) {
-		mark_local_s3_installed(0);
+		return mark_local_s3_installed(0);
 	}
+	return 0;
 }
 
 sub mark_local_s3_installed {
 	my ($installed) = @_;
 	$local_s3_installed = $installed;
-	return if $list_only;
+	return 1 if $list_only;
 	my $marker = "$work_dir/local-s3-installed";
 	if ($installed) {
 		open my $file, '>', $marker or die "write $marker: $!";
 		close $file or die "close $marker: $!";
 	} else {
-		unlink $marker;
+		return 1 unless -e $marker;
+		return unlink $marker;
 	}
+	return 1;
 }
 
 sub cleanup_on_exit {
 	my ($force) = @_;
 	return if $list_only || ($keep && !$force) || $cleaning_up;
 	$cleaning_up = 1;
-	print STDERR "cleaning up test resources\n";
-	print STDERR "cleanup: removing netshoot containers\n";
-	remove_netshoots();
-	print STDERR "cleanup: removing storage workloads\n";
-	remove_storage_workloads();
-	print STDERR "cleanup: uninstalling ODF from $micro\n" if cluster_config_exists($micro);
-	run_command("addon odf --cluster $micro uninstall --attempt") if cluster_config_exists($micro);
-	print STDERR "cleanup: uninstalling ODF from $first\n" if cluster_config_exists($first);
-	run_command("addon odf --cluster $first uninstall --attempt") if cluster_config_exists($first);
-	print STDERR "cleanup: removing local S3\n";
-	cleanup_local_s3();
-	print STDERR "cleanup: removing cluster $first\n";
-	remove_cluster($first);
-	print STDERR "cleanup: removing cluster $micro\n";
-	remove_cluster($micro);
-	print STDERR "cleanup: removing network\n";
-	remove_network();
+	my $passed = 1;
+	cleanup_log('starting');
+	cleanup_log('removing netshoot containers');
+	$passed = 0 unless remove_netshoots();
+	cleanup_log('removing storage workloads');
+	$passed = 0 unless remove_storage_workloads();
+	if (cluster_config_exists($micro)) {
+		cleanup_log("uninstalling ODF from $micro");
+		$passed = 0 unless run_command("addon odf --cluster $micro uninstall --attempt");
+	}
+	if (cluster_config_exists($first)) {
+		cleanup_log("uninstalling ODF from $first");
+		$passed = 0 unless run_command("addon odf --cluster $first uninstall --attempt");
+	}
+	cleanup_log('removing local S3');
+	$passed = 0 unless cleanup_local_s3();
+	cleanup_log("removing cluster $first");
+	$passed = 0 unless remove_cluster($first);
+	cleanup_log("removing cluster $micro");
+	$passed = 0 unless remove_cluster($micro);
+	cleanup_log('removing network');
+	$passed = 0 unless remove_network();
 	$started = 0;
 	$cleaning_up = 0;
+	cleanup_log('cleanup did not complete successfully') unless $passed;
+	return $passed;
+}
+
+sub cleanup_log {
+	print STDERR '[', local_timestamp(), '] cleanup: ', $_[0], "\n";
 }
 
 sub cluster_config_exists {
@@ -664,32 +783,79 @@ sub cleanup_kubeconfig {
 	my ($passed, $contents) = capture($mt, 'cluster', 'kubeconfig', '--name', $name);
 	return unless $passed && $contents ne '';
 	my $path = "$work_dir/$name-kubeconfig";
-	open my $file, '>', $path or die "write $path: $!";
-	print {$file} $contents;
-	close $file or die "close $path: $!";
+	write_private_file($path, $contents);
 	return $path;
 }
 
 sub cleanup_odf {
 	my ($cluster) = @_;
-	remove_storage_workloads($cluster);
-	run_ok("uninstall ODF from $cluster", "addon odf --cluster $cluster uninstall --attempt", $cluster);
+	my $workloads_removed = remove_storage_workloads($cluster);
+	check($workloads_removed, "remove storage workloads from $cluster", $cluster);
+	my $odf_removed = run_ok("uninstall ODF from $cluster", "addon odf --cluster $cluster uninstall --attempt", $cluster);
+	return $workloads_removed && $odf_removed;
+}
+
+sub storage_cluster_check_names {
+	my ($name) = @_;
+	return (
+		"$name StorageCluster is ready",
+		"$name RBD StorageClass is created",
+		"$name RBD CSI controller is created",
+		"$name RBD CSI controller is ready",
+		"$name RBD CSI node plugin is created",
+		"$name RBD CSI node plugin is ready",
+	);
+}
+
+sub skip_storage_cluster_checks {
+	my ($name, $reason) = @_;
+	skip($_, $reason) for storage_cluster_check_names($name);
+}
+
+sub skip_storage_workload_checks {
+	my ($cluster, $name, $reason, $include_create) = @_;
+	my $prefix = "[$cluster] ";
+	skip("${prefix}create $name StatefulSet", $reason) if $include_create;
+	skip("${prefix}wait for $name PVC", $reason);
+	skip("${prefix}wait for $name StatefulSet", $reason);
+	skip("${prefix}write to $name volume", $reason);
+	skip("${prefix}read from $name volume", $reason);
+	unless ($keep) {
+		skip("${prefix}delete $name StatefulSet", $reason);
+		skip("${prefix}wait for $name PVC deletion", $reason);
+	}
+}
+
+sub skip_odf_client_checks {
+	my ($reason) = @_;
+	skip('install ODF client operator on micro', $reason);
+	skip('sync route DNS entries', $reason);
+	skip('configure ODF client on micro', $reason);
+	skip('set client StorageClass', $reason);
+	skip_storage_workload_checks($micro, 'mt-odf-client', $reason, 1);
 }
 
 sub wait_storage_cluster {
 	my ($name, $kubeconfig) = @_;
-	kubectl_ok("$name StorageCluster is ready", $kubeconfig,
-		'wait --for=jsonpath={.status.phase}=Ready --timeout=600s storagecluster/ocs-storagecluster -n openshift-storage');
-	kubectl_ok("$name RBD StorageClass is created", $kubeconfig,
-		'wait --for=create --timeout=120s storageclass/ocs-storagecluster-ceph-rbd');
-	kubectl_ok("$name RBD CSI controller is created", $kubeconfig,
-		'wait --for=create --timeout=120s deployment/openshift-storage.rbd.csi.ceph.com-ctrlplugin -n openshift-storage');
-	kubectl_ok("$name RBD CSI controller is ready", $kubeconfig,
-		'rollout status deployment/openshift-storage.rbd.csi.ceph.com-ctrlplugin --timeout=120s -n openshift-storage');
-	kubectl_ok("$name RBD CSI node plugin is created", $kubeconfig,
-		'wait --for=create --timeout=120s daemonset/openshift-storage.rbd.csi.ceph.com-nodeplugin -n openshift-storage');
-	kubectl_ok("$name RBD CSI node plugin is ready", $kubeconfig,
-		'rollout status daemonset/openshift-storage.rbd.csi.ceph.com-nodeplugin --timeout=120s -n openshift-storage');
+	my @checks = (
+		['StorageCluster is ready', 'wait --for=jsonpath={.status.phase}=Ready --timeout=600s storagecluster/ocs-storagecluster -n openshift-storage'],
+		['RBD StorageClass is created', 'wait --for=create --timeout=120s storageclass/ocs-storagecluster-ceph-rbd'],
+		['RBD CSI controller is created', 'wait --for=create --timeout=120s deployment/openshift-storage.rbd.csi.ceph.com-ctrlplugin -n openshift-storage'],
+		['RBD CSI controller is ready', 'rollout status deployment/openshift-storage.rbd.csi.ceph.com-ctrlplugin --timeout=120s -n openshift-storage'],
+		['RBD CSI node plugin is created', 'wait --for=create --timeout=120s daemonset/openshift-storage.rbd.csi.ceph.com-nodeplugin -n openshift-storage'],
+		['RBD CSI node plugin is ready', 'rollout status daemonset/openshift-storage.rbd.csi.ceph.com-nodeplugin --timeout=120s -n openshift-storage'],
+	);
+	for my $index (0 .. $#checks) {
+		my ($check_name, $command) = @{$checks[$index]};
+		unless (kubectl_ok("$name $check_name", $kubeconfig, $command)) {
+			for my $remaining ($index + 1 .. $#checks) {
+				my $remaining_name = $checks[$remaining]->[0];
+				skip("$name $remaining_name", "$check_name failed");
+			}
+			return;
+		}
+	}
+	return 1;
 }
 
 sub run_level_4 {
@@ -700,8 +866,15 @@ sub run_level_4 {
 	run_ok('load ODF kernel modules', 'addon odf modules load');
 	section('configure single-node ODF', $first);
 	run_ok('install ODF on first', "addon odf --cluster $first install " . odf_install_args('odf-operator'));
-	run_ok('configure single-node ODF on first', "addon odf --cluster $first configure");
-	wait_storage_cluster('single-node ODF', $first_kubeconfig);
+	unless (configure_odf_provider('configure single-node ODF on first', "addon odf --cluster $first configure", $first_kubeconfig)) {
+		skip_storage_cluster_checks('single-node ODF', 'configure failed');
+		skip_storage_workload_checks($first, 'mt-odf-single', 'configure failed', 1);
+		return;
+	}
+	unless (wait_storage_cluster('single-node ODF', $first_kubeconfig)) {
+		skip_storage_workload_checks($first, 'mt-odf-single', 'StorageCluster did not become ready', 1);
+		return;
+	}
 	section('single-node ODF persistent volume', $first);
 	test_storage($first_kubeconfig, 'mt-odf-single', "$first-0");
 }
@@ -712,16 +885,16 @@ sub run_level_5 {
 	run_ok('add first provider worker', "node add --cluster $first");
 	run_ok('add second provider worker', "node add --cluster $first");
 	run_ok('install Rook Ceph operator on first', "addon odf --cluster $first install " . odf_install_args('rook-ceph-operator'));
-	run_ok('configure Rook provider on first', "addon odf --cluster $first configure --external-ceph");
-	kubectl_ok('Rook CephCluster is ready', $first_kubeconfig,
+	return unless run_ok('configure Rook provider on first', "addon odf --cluster $first configure --external-ceph");
+	return unless kubectl_ok('Rook CephCluster is ready', $first_kubeconfig,
 		'wait --for=condition=Ready --timeout=600s cephcluster/first-cephcluster -n openshift-storage');
-	kubectl_ok('Rook toolbox is ready', $first_kubeconfig,
+	return unless kubectl_ok('Rook toolbox is ready', $first_kubeconfig,
 		'wait --for=condition=Available --timeout=600s deployment/rook-ceph-tools -n openshift-storage');
 
 	section('external ODF consumer', $micro);
-	run_ok('install ODF on external consumer', "addon odf --cluster $micro install " . odf_install_args('odf-operator'));
-	run_ok('configure external ODF consumer', "addon odf --cluster $micro configure --connect-to $first");
-	wait_storage_cluster('external consumer ODF', $micro_kubeconfig);
+	return unless run_ok('install ODF on external consumer', "addon odf --cluster $micro install " . odf_install_args('odf-operator'));
+	return unless run_ok('configure external ODF consumer', "addon odf --cluster $micro configure --connect-to $first");
+	return unless wait_storage_cluster('external consumer ODF', $micro_kubeconfig);
 	test_storage($micro_kubeconfig, 'mt-odf-external', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
 }
 
@@ -738,14 +911,27 @@ sub run_level_6 {
 
 	section('single-node ODF provider', $first);
 	run_ok('install ODF provider on first', "addon odf --cluster $first install " . odf_install_args('odf-operator'));
-	run_ok('configure single-node ODF provider', "addon odf --cluster $first configure");
-	wait_storage_cluster('single-node ODF provider', $first_kubeconfig);
+	unless (configure_odf_provider('configure single-node ODF provider', "addon odf --cluster $first configure", $first_kubeconfig)) {
+		skip_storage_cluster_checks('single-node ODF provider', 'configure failed');
+		skip_storage_workload_checks($first, 'mt-odf-provider-single', 'configure failed', 1);
+		skip_odf_client_checks('provider configure failed');
+		return;
+	}
+	unless (wait_storage_cluster('single-node ODF provider', $first_kubeconfig)) {
+		skip_storage_workload_checks($first, 'mt-odf-provider-single', 'StorageCluster did not become ready', 1);
+		skip_odf_client_checks('provider StorageCluster did not become ready');
+		return;
+	}
 	test_storage($first_kubeconfig, 'mt-odf-provider-single', "$first-0", 'ocs-storagecluster-ceph-rbd', 300);
 
 	section('client-only ODF consumer', $micro);
 	run_ok('install ODF client operator on micro', "addon odf --cluster $micro install " . odf_install_args('ocs-client-operator'));
 	run_ok('sync route DNS entries', 'ops network --sync-routes');
-	run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first");
+	unless (run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first")) {
+		skip('set client StorageClass', 'client configure failed');
+		skip_storage_workload_checks($micro, 'mt-odf-client', 'client configure failed', 1);
+		return;
+	}
 	kubectl_ok('set client StorageClass', $first_kubeconfig,
 		"patch storageconsumer $micro -n openshift-storage --type=json -p '[{\"op\":\"add\",\"path\":\"/spec/storageClasses\",\"value\":[{\"name\":\"ocs-storagecluster-ceph-rbd\"}]}]'");
 	test_storage($micro_kubeconfig, 'mt-odf-client', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
@@ -757,14 +943,27 @@ sub run_level_7 {
 	run_ok('add first provider worker', "node add --cluster $first");
 	run_ok('add second provider worker', "node add --cluster $first");
 	run_ok('install ODF provider on first', "addon odf --cluster $first install " . odf_install_args('odf-operator'));
-	run_ok('configure multi-node ODF provider', "addon odf --cluster $first configure --hostnetwork --multi-node");
-	wait_storage_cluster('multi-node ODF provider', $first_kubeconfig);
+	unless (configure_odf_provider('configure multi-node ODF provider', "addon odf --cluster $first configure --hostnetwork --multi-node", $first_kubeconfig)) {
+		skip_storage_cluster_checks('multi-node ODF provider', 'provider configure failed');
+		skip_storage_workload_checks($first, 'mt-odf-provider', 'provider configure failed', 1);
+		skip_odf_client_checks('provider configure failed');
+		return;
+	}
+	unless (wait_storage_cluster('multi-node ODF provider', $first_kubeconfig)) {
+		skip_storage_workload_checks($first, 'mt-odf-provider', 'StorageCluster did not become ready', 1);
+		skip_odf_client_checks('provider StorageCluster did not become ready');
+		return;
+	}
 	test_storage($first_kubeconfig, 'mt-odf-provider', "$first-0", 'ocs-storagecluster-ceph-rbd', 300);
 
 	section('client-only ODF consumer', $micro);
 	run_ok('install ODF client operator on micro', "addon odf --cluster $micro install " . odf_install_args('ocs-client-operator'));
 	run_ok('sync route DNS entries', 'ops network --sync-routes');
-	run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first");
+	unless (run_ok('configure ODF client on micro', "addon odf --cluster $micro configure --client --connect-to $first")) {
+		skip('set client StorageClass', 'client configure failed');
+		skip_storage_workload_checks($micro, 'mt-odf-client', 'client configure failed', 1);
+		return;
+	}
 	kubectl_ok('set client StorageClass', $first_kubeconfig,
 		"patch storageconsumer $micro -n openshift-storage --type=json -p '[{\"op\":\"add\",\"path\":\"/spec/storageClasses\",\"value\":[{\"name\":\"ocs-storagecluster-ceph-rbd\"}]}]'");
 	test_storage($micro_kubeconfig, 'mt-odf-client', "$micro-0", 'ocs-storagecluster-ceph-rbd', 300);
@@ -837,18 +1036,25 @@ sub finish_level {
 	$odf_clusters //= [];
 	pause_before_cleanup();
 	unless ($keep) {
-		cleanup_local_s3() if $target == 8;
-		cleanup_network_state() if $target == 3;
+		my $cleanup_ok = 1;
+		if ($target == 8) {
+			$cleanup_ok = 0 unless cleanup_local_s3();
+		}
+		if ($target == 3) {
+			$cleanup_ok = 0 unless cleanup_network_state();
+		}
 		for my $cluster (@$odf_clusters) {
-			cleanup_odf($cluster);
+			$cleanup_ok = 0 unless cleanup_odf($cluster);
 		}
 		$list_scope = '';
 		for my $cluster (@$clusters) {
-			remove_cluster($cluster);
+			$cleanup_ok = 0 unless remove_cluster($cluster);
 		}
+		check($cleanup_ok, "level $target cleanup commands succeed", '');
 		if ($target == 3) {
 			check(!-d "$config_dir/,networks", 'network state directory is removed', '');
 		}
+		check(!-f "$work_dir/local-s3-installed", 'local-S3 marker is removed') if $target == 8;
 		check(config_is_empty(), "level $target cleanup removes all test state", '') if $target > 0;
 	}
 	$started = 0;
@@ -856,7 +1062,10 @@ sub finish_level {
 }
 
 sub run_selected_level {
-	prepare_level($level);
+	unless (prepare_level($level)) {
+		cleanup_on_exit(1) unless $keep;
+		finish();
+	}
 	if ($level == 8) {
 		section('install local S3 on the mt bridge', $micro);
 		mark_local_s3_installed(1);
@@ -945,7 +1154,7 @@ sub first_cluster_command {
 
 sub prepare_level {
 	my ($target) = @_;
-	return if $target < 3;
+	return 1 if $target < 3;
 
 	section("prepare level $target clusters");
 	run_ok("[$micro] create cluster for level $target", micro_cluster_command()) if $target != 4;
@@ -960,8 +1169,9 @@ sub prepare_level {
 	if ($target >= 4 && $target <= 7) {
 		run_ok("load ODF kernel modules for level $target", 'addon odf modules load');
 	}
-	$micro_kubeconfig = kubeconfig($micro) if $target != 4;
-	$first_kubeconfig = kubeconfig($first);
+	return unless $target == 4 || defined($micro_kubeconfig = kubeconfig($micro));
+	return unless defined($first_kubeconfig = kubeconfig($first));
+	return 1;
 }
 
 sub run_level_1 {
@@ -971,7 +1181,7 @@ section('cluster start', $micro);
 run_ok('create default cluster', micro_cluster_command());
 run_fail('duplicate cluster creation is rejected', "cluster create --name $micro --no-topolvm --api-server-port $api_port");
 run_ok('cluster config', "cluster config --name $micro");
-$micro_kubeconfig = kubeconfig($micro);
+return unless defined($micro_kubeconfig = kubeconfig($micro));
 kubectl_ok('list default cluster resources', $micro_kubeconfig, 'get all -A');
 run_with_input('cluster exec', "oc get all -A\nexit\n", "cluster exec --name $micro");
 run_ok('cluster list', 'cluster ls');
@@ -990,7 +1200,7 @@ section('worker onboarding', $first);
 run_ok('create TopoLVM cluster', first_cluster_command());
 run_ok('add worker', "node add --cluster $first");
 run_ok('worker node config', "node config --cluster $first");
-$first_kubeconfig = kubeconfig($first);
+return unless defined($first_kubeconfig = kubeconfig($first));
 kubectl_ok('list worker cluster resources', $first_kubeconfig, 'get all -A');
 run_with_input('worker cluster exec', "oc get all -A\nexit\n", "cluster exec --name $first --container $first-1");
 run_with_input('worker has power tuning config', "test -s /etc/microshift/config.d/10-power-tuning.yaml\nexit\n", "cluster exec --name $first --container $first-1");
@@ -1024,7 +1234,7 @@ run_netshoot('micro-gp1-a', $micro_kubeconfig, "$micro-0", "default/$network-gp1
 my $first_default_ip = network_ip($first_kubeconfig, 'first-default-a', "$network-default");
 my $micro_gp1_ip = network_ip($micro_kubeconfig, 'micro-gp1-a', "$network-gp1");
 check(defined $first_default_ip && defined $micro_gp1_ip, '[first,micro] read initial secondary network addresses');
-fping('[first -> micro] different groups do not reach each other', $first_kubeconfig, 'first-default-a', $micro_gp1_ip, 0) if defined $micro_gp1_ip;
+fping('[first -> micro] different groups do not reach each other', $first_kubeconfig, 'first-default-a', $micro_gp1_ip, 0);
 
 run_ok('attach same group with repeated flags', "network attach --cluster $first:gp1 --cluster $micro:gp1 --to $network");
 run_netshoot('first-gp1-b', $first_kubeconfig, "$first-0", "default/$network-gp1");
@@ -1033,7 +1243,7 @@ my $first_gp1_ip = network_ip($first_kubeconfig, 'first-gp1-b', "$network-gp1");
 my $micro_gp1_same_ip = network_ip($micro_kubeconfig, 'micro-gp1-b', "$network-gp1");
 check(defined $first_gp1_ip && defined $micro_gp1_same_ip, '[first,micro] read shared secondary network addresses');
 check(defined $first_gp1_ip && defined $micro_gp1_same_ip && $first_gp1_ip ne $micro_gp1_same_ip, '[first,micro] same-group secondary addresses are unique');
-fping('[first -> micro] same group reaches across clusters', $first_kubeconfig, 'first-gp1-b', $micro_gp1_same_ip, 1) if defined $micro_gp1_same_ip;
+fping('[first -> micro] same group reaches across clusters', $first_kubeconfig, 'first-gp1-b', $micro_gp1_same_ip, 1);
 
 run_fail("[$micro] host-local attachment blocks worker add", "node add --cluster $micro");
 for my $pod (qw(first-default-a micro-gp1-a first-gp1-b micro-gp1-b)) {
@@ -1062,8 +1272,8 @@ check(
 		&& node_has_whereabouts_label($micro_kubeconfig, 'micro-1'),
 	'[first,micro] cluster nodes have Whereabouts labels',
 );
-fping("[$first] same cluster reaches between nodes", $first_kubeconfig, 'first-default-c', $first_default_b_ip, 1) if defined $first_default_b_ip;
-fping("[$micro] same cluster reaches between nodes", $micro_kubeconfig, 'micro-default-c', $micro_default_b_ip, 1) if defined $micro_default_b_ip;
+fping("[$first] same cluster reaches between nodes", $first_kubeconfig, 'first-default-c', $first_default_b_ip, 1);
+fping("[$micro] same cluster reaches between nodes", $micro_kubeconfig, 'micro-default-c', $micro_default_b_ip, 1);
 
 # Plain cluster traffic must fail before peering and work after peering.
 section('plain pod routing before and after peering', "$first,$micro");
@@ -1072,11 +1282,11 @@ run_netshoot('plain-micro', $micro_kubeconfig, "$micro-0", '');
 my $plain_first_ip = pod_ip($first_kubeconfig, 'plain-first');
 my $plain_micro_ip = pod_ip($micro_kubeconfig, 'plain-micro');
 check(defined $plain_first_ip && defined $plain_micro_ip, '[first,micro] read plain pod addresses');
-fping('[first -> micro] plain pods fail across clusters before peer', $first_kubeconfig, 'plain-first', $plain_micro_ip, 0) if defined $plain_micro_ip;
+fping('[first -> micro] plain pods fail across clusters before peer', $first_kubeconfig, 'plain-first', $plain_micro_ip, 0);
 
 run_ok('peer with comma syntax', "network peer --cluster $first,$micro");
 run_ok('peer again with repeated flags', "network peer --cluster $first --cluster $micro");
-fping('[first -> micro] plain pods reach across clusters after peer', $first_kubeconfig, 'plain-first', $plain_micro_ip, 1) if defined $plain_micro_ip;
+fping('[first -> micro] plain pods reach across clusters after peer', $first_kubeconfig, 'plain-first', $plain_micro_ip, 1);
 
 # Newly added workers need the peer rules applied explicitly.
 section('peer refresh after worker replacement', "$first,$micro");
@@ -1088,9 +1298,9 @@ run_ok('add worker after peer', "node add --cluster $micro");
 run_netshoot('plain-micro-new', $micro_kubeconfig, "$micro-1", '');
 my $plain_micro_new_ip = pod_ip($micro_kubeconfig, 'plain-micro-new');
 check(defined $plain_micro_new_ip, "[$micro] read replacement worker pod address");
-fping("[$first -> $micro] new worker is not reached by old peer rules", $first_kubeconfig, 'plain-first', $plain_micro_new_ip, 0) if defined $plain_micro_new_ip;
+fping("[$first -> $micro] new worker is not reached by old peer rules", $first_kubeconfig, 'plain-first', $plain_micro_new_ip, 0);
 run_ok("[$first,$micro] peer replacement worker", "network peer --cluster $first,$micro", "$first,$micro");
-fping("[$first -> $micro] replacement worker reaches after peer refresh", $first_kubeconfig, 'plain-first', $plain_micro_new_ip, 1) if defined $plain_micro_new_ip;
+fping("[$first -> $micro] replacement worker reaches after peer refresh", $first_kubeconfig, 'plain-first', $plain_micro_new_ip, 1);
 
 # Removing routes and rules repeatedly must remain successful.
 section('idempotent peer removal', "$first,$micro");
@@ -1114,7 +1324,10 @@ sub main {
 		$local_s3_installed = -f "$work_dir/local-s3-installed";
 		$micro_kubeconfig = cleanup_kubeconfig($micro);
 		$first_kubeconfig = cleanup_kubeconfig($first);
-		cleanup_on_exit();
+		unless (cleanup_on_exit()) {
+			print "cleanup incomplete\n";
+			exit 1;
+		}
 		print "cleanup complete\n";
 		return;
 	}
@@ -1130,6 +1343,7 @@ sub main {
 	$started = 1;
 	if (defined $level) {
 		run_selected_level();
+		return;
 	}
 	if ($upto == 8) {
 		section('install local S3 on the mt bridge', $micro);
@@ -1160,34 +1374,53 @@ sub main {
 	if ($upto == 3) {
 		finish_level(3, [$first, $micro], []);
 	}
-	cleanup_network_state();
+	unless (cleanup_network_state()) {
+		check(0, 'network cleanup before ODF levels succeeds');
+		cleanup_on_exit(1) unless $keep;
+		finish();
+	}
 
 	run_level_4();
 	if ($upto == 4) {
 		finish_level(4, [$first, $micro], [$first]);
 	}
-	cleanup_odf($first);
+	unless (cleanup_odf($first)) {
+		cleanup_on_exit(1) unless $keep;
+		finish();
+	}
 
 	run_level_5();
 	if ($upto == 5) {
 		finish_level(5, [$first, $micro], [$micro, $first]);
 	}
-	cleanup_odf($micro);
-	cleanup_odf($first);
+	my $level5_cleanup_ok = cleanup_odf($micro);
+	$level5_cleanup_ok = cleanup_odf($first) && $level5_cleanup_ok;
+	unless ($level5_cleanup_ok) {
+		cleanup_on_exit(1) unless $keep;
+		finish();
+	}
 
 	run_level_6();
 	if ($upto == 6) {
 		finish_level(6, [$first, $micro], [$micro, $first]);
 	}
-	cleanup_odf($micro);
-	cleanup_odf($first);
-	run_ok('unpeer ODF provider and client clusters', "network unpeer --cluster $first,$micro", "$first,$micro");
+	my $level6_cleanup_ok = cleanup_odf($micro);
+	$level6_cleanup_ok = cleanup_odf($first) && $level6_cleanup_ok;
+	$level6_cleanup_ok = run_ok('unpeer ODF provider and client clusters', "network unpeer --cluster $first,$micro", "$first,$micro") && $level6_cleanup_ok;
+	unless ($level6_cleanup_ok) {
+		cleanup_on_exit(1) unless $keep;
+		finish();
+	}
 	run_level_7();
 	if ($upto == 7) {
 		finish_level(7, [$first, $micro], [$micro, $first]);
 	}
-	cleanup_odf($micro);
-	cleanup_odf($first);
+	my $level7_cleanup_ok = cleanup_odf($micro);
+	$level7_cleanup_ok = cleanup_odf($first) && $level7_cleanup_ok;
+	unless ($level7_cleanup_ok) {
+		cleanup_on_exit(1) unless $keep;
+		finish();
+	}
 	run_level_8();
 	finish_level(8, [$first, $micro], []);
 }
