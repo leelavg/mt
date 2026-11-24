@@ -69,6 +69,16 @@ copy_ref_file() {
         esac
 
         if copy_ref_file "$path"; then
+            if [[ "$path" == README.md ]]; then
+                # GitHub uses repository-relative image paths, while versioned pages need their version prefix.
+                sed "s#src=\"internal/docs/assets/mt.svg\"#src=\"${site_url}internal/docs/assets/mt.svg\"#" "$src/$path" |
+                    awk '
+                        /<a class="mt-demo-thumbnail"/ { skip = 1 }
+                        !skip { print }
+                        skip && /<\/a>/ { skip = 0 }
+                    ' > "$src/$path.tmp"
+                mv "$src/$path.tmp" "$src/$path"
+            fi
             printf -- '- [%s](%s)\n' "$title" "$path"
         else
             printf 'Skipping %s, missing from %s\n' "$path" "$ref" >&2

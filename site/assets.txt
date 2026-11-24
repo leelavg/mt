@@ -1,3 +1,4 @@
 LICENSE
 internal/docs/devlog.txt
 internal/docs/assets/mt.svg
+site/mt-demo-thumbnail.jpg
