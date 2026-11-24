@@ -71,6 +71,32 @@ mt docs --skill                # driving mt using any of your agents
 mt docs --examples             # samples for specific scenarios
 ```
 
+## Demo
+
+<a class="mt-demo-thumbnail" href="https://mt.thoughtexpo.com/#demo">
+  <img src="site/mt-demo-thumbnail.jpg" alt="Open the mt documentation and demo">
+</a>
+
+<video id="mt-demo-video" controls preload="metadata" width="100%">
+  <source src="https://github.com/leelavg/mt/releases/download/v0.0.3/mt-demo.webm" type="video/webm">
+  <a href="https://github.com/leelavg/mt/releases/download/v0.0.3/mt-demo.webm">Download the demo video</a>
+</video>
+
+[Download the demo video](https://github.com/leelavg/mt/releases/download/v0.0.3/mt-demo.webm)
+
+<details>
+<summary>Video outline</summary>
+<br>
+This unedited video gives an overview of mt. Timestamps are approximate. In a few places, I say “args” when I mean “flags.”
+
+- By 5 min: Cluster creation and flags
+- By 10 min: Storage and network options, subcommands, and flags
+- By 15 min: Resource usage and single-run commands
+- By 20 min: Networking operations, peering, attachment, and extra NICs
+- By 25 min: Multus networking for overlapping networks and VLAN grouping
+- By 30 min: Commands run internally for a single CLI invocation
+</details>
+
 ## Testing
 
 Run the suite on a clean Linux host with rootful Podman and sudoers created against the built binary:

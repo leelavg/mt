@@ -15,11 +15,8 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
+  build:
     if: github.ref_type != 'tag' || (!contains(github.ref_name, '-') && !contains(github.ref_name, '+'))
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -31,6 +28,15 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site/public
+
+  deploy:
+    needs: build
+    if: github.ref_type != 'tag' || (!contains(github.ref_name, '-') && !contains(github.ref_name, '+'))
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
